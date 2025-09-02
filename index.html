@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pianificatore Menù Settimanale</title>
+    <title>Pianificatore Menu Settimanale</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -18,64 +18,6 @@
             padding: 20px;
             border-radius: 10px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        
-        /* Responsive per mobile */
-        @media (max-width: 768px) {
-            body {
-                padding: 10px;
-            }
-            
-            .container {
-                padding: 10px;
-            }
-            
-            .targets {
-                flex-direction: column;
-                gap: 10px;
-            }
-            
-            .week-selector {
-                grid-template-columns: repeat(4, 1fr);
-                gap: 5px;
-            }
-            
-            .week-btn {
-                padding: 8px 10px;
-                font-size: 0.8em;
-            }
-            
-            .days-container {
-                grid-template-columns: 1fr;
-            }
-            
-            .charts-container {
-                flex-direction: column;
-                gap: 20px;
-            }
-            
-            .chart-canvas {
-                width: 200px !important;
-                height: 200px !important;
-            }
-            
-            .summary-stats {
-                flex-direction: column;
-                gap: 10px;
-            }
-            
-            .food-name {
-                width: 50%;
-            }
-            
-            .add-food-form {
-                text-align: center;
-            }
-            
-            .add-food-form input {
-                width: 90%;
-                margin: 5px 0;
-            }
         }
         .header {
             text-align: center;
@@ -331,12 +273,57 @@
             width: 100%;
             font-size: 16px;
         }
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            .container {
+                padding: 10px;
+            }
+            .targets {
+                flex-direction: column;
+                gap: 10px;
+            }
+            .week-selector {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 5px;
+            }
+            .week-btn {
+                padding: 8px 10px;
+                font-size: 0.8em;
+            }
+            .days-container {
+                grid-template-columns: 1fr;
+            }
+            .charts-container {
+                flex-direction: column;
+                gap: 20px;
+            }
+            .chart-canvas {
+                width: 200px !important;
+                height: 200px !important;
+            }
+            .summary-stats {
+                flex-direction: column;
+                gap: 10px;
+            }
+            .food-name {
+                width: 50%;
+            }
+            .add-food-form {
+                text-align: center;
+            }
+            .add-food-form input {
+                width: 90%;
+                margin: 5px 0;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🍽️ Pianificatore Menù Settimanale</h1>
+            <h1>🍽️ Pianificatore Menu Settimanale</h1>
             <p>Piano alimentare da 1250 calorie per 8 settimane</p>
         </div>
 
@@ -380,7 +367,6 @@
             </div>
 
             <div class="days-container" id="daysContainer">
-                <!-- Giorni generati dinamicamente -->
             </div>
 
             <div class="summary">
@@ -433,7 +419,6 @@
                     </tr>
                 </thead>
                 <tbody id="foodsTableBody">
-                    <!-- Tabella generata dinamicamente -->
                 </tbody>
             </table>
         </div>
@@ -441,7 +426,6 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script>
-        // Database degli alimenti
         let foods = {
             'pane': {cal: 250, prot: 8, carbs: 50, fat: 1},
             'pasta': {cal: 350, prot: 12, carbs: 70, fat: 2},
@@ -473,49 +457,43 @@
         let targetChart = null;
         let weeklyChart = null;
 
-        // Inizializza dati per 8 settimane
         function initData() {
-            // Carica dati salvati o inizializza vuoti
             const savedData = localStorage.getItem('pianificatore-menu');
             if (savedData) {
                 mealData = JSON.parse(savedData);
             } else {
                 for (let week = 1; week <= 8; week++) {
-                    mealData[`week${week}`] = {};
+                    mealData['week' + week] = {};
                     days.forEach(day => {
-                        mealData[`week${week}`][day] = {};
+                        mealData['week' + week][day] = {};
                         meals.forEach(meal => {
-                            mealData[`week${week}`][day][meal] = [];
+                            mealData['week' + week][day][meal] = [];
                         });
                     });
                 }
             }
             
-            // Carica database alimenti personalizzato
             const savedFoods = localStorage.getItem('pianificatore-foods');
             if (savedFoods) {
                 foods = JSON.parse(savedFoods);
             }
         }
 
-        // Salva dati automaticamente
         function saveData() {
             localStorage.setItem('pianificatore-menu', JSON.stringify(mealData));
             localStorage.setItem('pianificatore-foods', JSON.stringify(foods));
         }
 
-        // Seleziona settimana
         function selectWeek(weekNumber) {
             document.querySelectorAll('.week-btn').forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
             
             currentWeek = weekNumber;
-            document.getElementById('currentWeekTitle').textContent = `Settimana ${weekNumber}`;
+            document.getElementById('currentWeekTitle').textContent = 'Settimana ' + weekNumber;
             
             createDays();
         }
 
-        // Crea interfaccia giorni
         function createDays() {
             const container = document.getElementById('daysContainer');
             container.innerHTML = '';
@@ -523,29 +501,26 @@
             days.forEach(day => {
                 const dayDiv = document.createElement('div');
                 dayDiv.className = 'day-card';
-                dayDiv.innerHTML = `
-                    <div class="day-header">${day}</div>
-                    ${meals.map(meal => `
-                        <div class="meal">
-                            <div class="meal-title">${meal}</div>
-                            <div id="${day}-${meal}"></div>
-                            <button class="add-btn" onclick="addFood('${day}', '${meal}')">+ Aggiungi cibo</button>
-                        </div>
-                    `).join('')}
-                    <div class="day-summary" id="summary-${day}">
-                        <h4>📊 Totali del Giorno</h4>
-                        <div id="totals-${day}">
-                            <div class="total-item"><span>Calorie:</span><span>0 kcal (0%)</span></div>
-                            <div class="total-item"><span>Proteine:</span><span>0g (0%)</span></div>
-                            <div class="total-item"><span>Carboidrati:</span><span>0g (0%)</span></div>
-                            <div class="total-item"><span>Grassi:</span><span>0g (0%)</span></div>
-                        </div>
-                    </div>
-                `;
+                dayDiv.innerHTML = '<div class="day-header">' + day + '</div>' +
+                    meals.map(meal => 
+                        '<div class="meal">' +
+                        '<div class="meal-title">' + meal + '</div>' +
+                        '<div id="' + day + '-' + meal + '"></div>' +
+                        '<button class="add-btn" onclick="addFood(\'' + day + '\', \'' + meal + '\')">+ Aggiungi cibo</button>' +
+                        '</div>'
+                    ).join('') +
+                    '<div class="day-summary" id="summary-' + day + '">' +
+                    '<h4>📊 Totali del Giorno</h4>' +
+                    '<div id="totals-' + day + '">' +
+                    '<div class="total-item"><span>Calorie:</span><span>0 kcal (0%)</span></div>' +
+                    '<div class="total-item"><span>Proteine:</span><span>0g (0%)</span></div>' +
+                    '<div class="total-item"><span>Carboidrati:</span><span>0g (0%)</span></div>' +
+                    '<div class="total-item"><span>Grassi:</span><span>0g (0%)</span></div>' +
+                    '</div>' +
+                    '</div>';
                 container.appendChild(dayDiv);
                 
-                // Ricrea alimenti esistenti
-                const weekData = mealData[`week${currentWeek}`][day];
+                const weekData = mealData['week' + currentWeek][day];
                 meals.forEach(meal => {
                     if (weekData[meal] && weekData[meal].length > 0) {
                         weekData[meal].forEach(item => recreateFood(item, day, meal));
@@ -553,75 +528,67 @@
                 });
             });
 
-            // Aggiungi grafici
             const chartsDiv = document.createElement('div');
             chartsDiv.className = 'charts-container';
-            chartsDiv.innerHTML = `
-                <div class="chart-wrapper">
-                    <h4>🎯 Target Nutrizionali</h4>
-                    <canvas id="targetChart" class="chart-canvas"></canvas>
-                </div>
-                <div class="chart-wrapper">
-                    <h4>📊 Risultati Settimana ${currentWeek}</h4>
-                    <canvas id="weeklyChart" class="chart-canvas"></canvas>
-                </div>
-            `;
+            chartsDiv.innerHTML = 
+                '<div class="chart-wrapper">' +
+                '<h4>🎯 Target Nutrizionali</h4>' +
+                '<canvas id="targetChart" class="chart-canvas"></canvas>' +
+                '</div>' +
+                '<div class="chart-wrapper">' +
+                '<h4>📊 Risultati Settimana ' + currentWeek + '</h4>' +
+                '<canvas id="weeklyChart" class="chart-canvas"></canvas>' +
+                '</div>';
             container.appendChild(chartsDiv);
 
-            // Aggiorna tutto
             days.forEach(day => updateDaySummary(day));
             updateSummary();
             createCharts();
         }
 
-        // Ricrea alimento esistente
         function recreateFood(item, day, meal) {
             const foodDiv = document.createElement('div');
             foodDiv.className = 'food-item';
-            foodDiv.innerHTML = `
-                <input type="text" class="food-name" value="${item.name}" onchange="updateFood('${item.id}', '${day}', '${meal}')" id="name-${item.id}">
-                <input type="number" class="food-qty" value="${item.qty}" onchange="updateFood('${item.id}', '${day}', '${meal}')" id="qty-${item.id}">
-                <span>g</span>
-                <button class="remove-btn" onclick="removeFood('${item.id}', '${day}', '${meal}')">×</button>
-                <div class="food-info" id="info-${item.id}">
-                    ${item.nutrition.cal} kcal | P: ${item.nutrition.prot}g | C: ${item.nutrition.carbs}g | G: ${item.nutrition.fat}g
-                </div>
-            `;
-            foodDiv.id = `food-${item.id}`;
-            document.getElementById(`${day}-${meal}`).appendChild(foodDiv);
+            foodDiv.innerHTML = 
+                '<input type="text" class="food-name" value="' + item.name + '" onchange="updateFood(\'' + item.id + '\', \'' + day + '\', \'' + meal + '\')" id="name-' + item.id + '">' +
+                '<input type="number" class="food-qty" value="' + item.qty + '" onchange="updateFood(\'' + item.id + '\', \'' + day + '\', \'' + meal + '\')" id="qty-' + item.id + '">' +
+                '<span>g</span>' +
+                '<button class="remove-btn" onclick="removeFood(\'' + item.id + '\', \'' + day + '\', \'' + meal + '\')">×</button>' +
+                '<div class="food-info" id="info-' + item.id + '">' +
+                item.nutrition.cal + ' kcal | P: ' + item.nutrition.prot + 'g | C: ' + item.nutrition.carbs + 'g | G: ' + item.nutrition.fat + 'g' +
+                '</div>';
+            foodDiv.id = 'food-' + item.id;
+            document.getElementById(day + '-' + meal).appendChild(foodDiv);
         }
 
-        // Aggiungi cibo
         function addFood(day, meal) {
             const id = Date.now().toString();
             const foodDiv = document.createElement('div');
             foodDiv.className = 'food-item';
-            foodDiv.innerHTML = `
-                <input type="text" class="food-name" placeholder="Nome cibo" onchange="updateFood('${id}', '${day}', '${meal}')" id="name-${id}">
-                <input type="number" class="food-qty" value="100" onchange="updateFood('${id}', '${day}', '${meal}')" id="qty-${id}">
-                <span>g</span>
-                <button class="remove-btn" onclick="removeFood('${id}', '${day}', '${meal}')">×</button>
-                <div class="food-info" id="info-${id}">Inserisci il nome del cibo</div>
-            `;
-            foodDiv.id = `food-${id}`;
-            document.getElementById(`${day}-${meal}`).appendChild(foodDiv);
+            foodDiv.innerHTML = 
+                '<input type="text" class="food-name" placeholder="Nome cibo" onchange="updateFood(\'' + id + '\', \'' + day + '\', \'' + meal + '\')" id="name-' + id + '">' +
+                '<input type="number" class="food-qty" value="100" onchange="updateFood(\'' + id + '\', \'' + day + '\', \'' + meal + '\')" id="qty-' + id + '">' +
+                '<span>g</span>' +
+                '<button class="remove-btn" onclick="removeFood(\'' + id + '\', \'' + day + '\', \'' + meal + '\')">×</button>' +
+                '<div class="food-info" id="info-' + id + '">Inserisci il nome del cibo</div>';
+            foodDiv.id = 'food-' + id;
+            document.getElementById(day + '-' + meal).appendChild(foodDiv);
             
-            mealData[`week${currentWeek}`][day][meal].push({
+            mealData['week' + currentWeek][day][meal].push({
                 id: id,
                 name: '',
                 qty: 100,
                 nutrition: {cal: 0, prot: 0, carbs: 0, fat: 0}
             });
             
-            saveData(); // Salva automaticamente
+            saveData();
         }
 
-        // Aggiorna cibo
         function updateFood(id, day, meal) {
-            const name = document.getElementById(`name-${id}`).value.toLowerCase();
-            const qty = parseFloat(document.getElementById(`qty-${id}`).value) || 100;
+            const name = document.getElementById('name-' + id).value.toLowerCase();
+            const qty = parseFloat(document.getElementById('qty-' + id).value) || 100;
             
-            const item = mealData[`week${currentWeek}`][day][meal].find(item => item.id === id);
+            const item = mealData['week' + currentWeek][day][meal].find(item => item.id === id);
             if (!item) return;
 
             item.name = name;
@@ -636,35 +603,33 @@
                     fat: Math.round(foods[name].fat * multiplier * 10) / 10
                 };
 
-                document.getElementById(`info-${id}`).innerHTML = 
-                    `${item.nutrition.cal} kcal | P: ${item.nutrition.prot}g | C: ${item.nutrition.carbs}g | G: ${item.nutrition.fat}g`;
+                document.getElementById('info-' + id).innerHTML = 
+                    item.nutrition.cal + ' kcal | P: ' + item.nutrition.prot + 'g | C: ' + item.nutrition.carbs + 'g | G: ' + item.nutrition.fat + 'g';
             } else if (name) {
-                document.getElementById(`info-${id}`).innerHTML = 'Cibo non trovato';
+                document.getElementById('info-' + id).innerHTML = 'Cibo non trovato';
             }
 
             updateDaySummary(day);
             updateSummary();
             updateCharts();
-            saveData(); // Salva automaticamente
+            saveData();
         }
 
-        // Rimuovi cibo
         function removeFood(id, day, meal) {
-            document.getElementById(`food-${id}`).remove();
-            mealData[`week${currentWeek}`][day][meal] = mealData[`week${currentWeek}`][day][meal].filter(item => item.id !== id);
+            document.getElementById('food-' + id).remove();
+            mealData['week' + currentWeek][day][meal] = mealData['week' + currentWeek][day][meal].filter(item => item.id !== id);
             updateDaySummary(day);
             updateSummary();
             updateCharts();
-            saveData(); // Salva automaticamente
+            saveData();
         }
 
-        // Aggiorna riepilogo giornaliero
         function updateDaySummary(day) {
             let dayCal = 0, dayProt = 0, dayCarbs = 0, dayFat = 0;
             
             meals.forEach(meal => {
-                if (mealData[`week${currentWeek}`][day][meal]) {
-                    mealData[`week${currentWeek}`][day][meal].forEach(food => {
+                if (mealData['week' + currentWeek][day][meal]) {
+                    mealData['week' + currentWeek][day][meal].forEach(food => {
                         dayCal += food.nutrition.cal || 0;
                         dayProt += food.nutrition.prot || 0;
                         dayCarbs += food.nutrition.carbs || 0;
@@ -673,24 +638,21 @@
                 }
             });
 
-            // Calcola percentuali rispetto ai target
             const calPerc = Math.round((dayCal / 1250) * 100);
             const protPerc = Math.round((dayProt / 63) * 100);
             const carbsPerc = Math.round((dayCarbs / 172) * 100);
             const fatPerc = Math.round((dayFat / 35) * 100);
 
-            const totalsDiv = document.getElementById(`totals-${day}`);
+            const totalsDiv = document.getElementById('totals-' + day);
             if (totalsDiv) {
-                totalsDiv.innerHTML = `
-                    <div class="total-item"><span>Calorie:</span><span>${dayCal} kcal (${calPerc}%)</span></div>
-                    <div class="total-item"><span>Proteine:</span><span>${dayProt.toFixed(1)}g (${protPerc}%)</span></div>
-                    <div class="total-item"><span>Carboidrati:</span><span>${dayCarbs.toFixed(1)}g (${carbsPerc}%)</span></div>
-                    <div class="total-item"><span>Grassi:</span><span>${dayFat.toFixed(1)}g (${fatPerc}%)</span></div>
-                `;
+                totalsDiv.innerHTML = 
+                    '<div class="total-item"><span>Calorie:</span><span>' + dayCal + ' kcal (' + calPerc + '%)</span></div>' +
+                    '<div class="total-item"><span>Proteine:</span><span>' + dayProt.toFixed(1) + 'g (' + protPerc + '%)</span></div>' +
+                    '<div class="total-item"><span>Carboidrati:</span><span>' + dayCarbs.toFixed(1) + 'g (' + carbsPerc + '%)</span></div>' +
+                    '<div class="total-item"><span>Grassi:</span><span>' + dayFat.toFixed(1) + 'g (' + fatPerc + '%)</span></div>';
             }
         }
 
-        // Aggiorna riepilogo settimanale
         function updateSummary() {
             let totalCal = 0, totalProt = 0, totalCarbs = 0, totalFat = 0;
             let dayCount = 0;
@@ -699,8 +661,8 @@
                 let dayCal = 0, dayProt = 0, dayCarbs = 0, dayFat = 0;
                 
                 meals.forEach(meal => {
-                    if (mealData[`week${currentWeek}`][day][meal]) {
-                        mealData[`week${currentWeek}`][day][meal].forEach(food => {
+                    if (mealData['week' + currentWeek][day][meal]) {
+                        mealData['week' + currentWeek][day][meal].forEach(food => {
                             dayCal += food.nutrition.cal || 0;
                             dayProt += food.nutrition.prot || 0;
                             dayCarbs += food.nutrition.carbs || 0;
@@ -726,18 +688,14 @@
             }
         }
 
-        // Crea grafici
         function createCharts() {
-            // Distruggi grafici esistenti
             if (targetChart) targetChart.destroy();
             if (weeklyChart) weeklyChart.destroy();
 
-            // Grafico Target
             const targetCtx = document.getElementById('targetChart').getContext('2d');
             targetChart = new Chart(targetCtx, {
-                type: 'pie',
-                data:
-                  data: {
+               type: 'pie',
+               data: {
                    labels: ['Carboidrati (55%)', 'Proteine (20%)', 'Grassi (25%)'],
                    datasets: [{
                        data: [55, 20, 25],
@@ -755,12 +713,11 @@
                }
            });
 
-           // Calcola dati settimanali
            let totalCal = 0, totalProt = 0, totalCarbs = 0, totalFat = 0;
            days.forEach(day => {
                meals.forEach(meal => {
-                   if (mealData[`week${currentWeek}`][day][meal]) {
-                       mealData[`week${currentWeek}`][day][meal].forEach(food => {
+                   if (mealData['week' + currentWeek][day][meal]) {
+                       mealData['week' + currentWeek][day][meal].forEach(food => {
                            totalCal += food.nutrition.cal || 0;
                            totalProt += food.nutrition.prot || 0;
                            totalCarbs += food.nutrition.carbs || 0;
@@ -770,7 +727,6 @@
                });
            });
 
-           // Grafico Settimanale
            const weeklyCtx = document.getElementById('weeklyChart').getContext('2d');
            
            if (totalCal === 0) {
@@ -794,7 +750,6 @@
                    }
                });
            } else {
-               // Calcola percentuali
                const carbsPerc = Math.round((totalCarbs * 4 / totalCal) * 100);
                const protPerc = Math.round((totalProt * 4 / totalCal) * 100);
                const fatPerc = Math.round((totalFat * 9 / totalCal) * 100);
@@ -802,7 +757,7 @@
                weeklyChart = new Chart(weeklyCtx, {
                    type: 'pie',
                    data: {
-                       labels: [`Carboidrati (${carbsPerc}%)`, `Proteine (${protPerc}%)`, `Grassi (${fatPerc}%)`],
+                       labels: ['Carboidrati (' + carbsPerc + '%)', 'Proteine (' + protPerc + '%)', 'Grassi (' + fatPerc + '%)'],
                        datasets: [{
                            data: [carbsPerc, protPerc, fatPerc],
                            backgroundColor: ['#FFB84D', '#4FACFE', '#FF6B9D'],
@@ -821,12 +776,10 @@
            }
        }
 
-       // Aggiorna grafici
        function updateCharts() {
            createCharts();
        }
 
-       // Gestione tab
        function showTab(tabName) {
            document.querySelectorAll('.tab-content').forEach(content => {
                content.classList.remove('active');
@@ -844,7 +797,6 @@
            }
        }
 
-       // Popola tabella alimenti
        function populateFoodsTable() {
            const tbody = document.getElementById('foodsTableBody');
            tbody.innerHTML = '';
@@ -852,22 +804,20 @@
            Object.keys(foods).forEach(foodName => {
                const food = foods[foodName];
                const row = tbody.insertRow();
-               row.innerHTML = `
-                   <td style="text-transform: capitalize;">${foodName}</td>
-                   <td>${food.cal}</td>
-                   <td>${food.prot}</td>
-                   <td>${food.carbs}</td>
-                   <td>${food.fat}</td>
-                   <td>
-                       <button onclick="deleteFood('${foodName}')" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">
-                           Elimina
-                       </button>
-                   </td>
-               `;
+               row.innerHTML = 
+                   '<td style="text-transform: capitalize;">' + foodName + '</td>' +
+                   '<td>' + food.cal + '</td>' +
+                   '<td>' + food.prot + '</td>' +
+                   '<td>' + food.carbs + '</td>' +
+                   '<td>' + food.fat + '</td>' +
+                   '<td>' +
+                   '<button onclick="deleteFood(\'' + foodName + '\')" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">' +
+                   'Elimina' +
+                   '</button>' +
+                   '</td>';
            });
        }
 
-       // Aggiungi nuovo alimento
        function addNewFood() {
            const name = document.getElementById('newFoodName').value.toLowerCase().trim();
            const cal = parseFloat(document.getElementById('newFoodCal').value);
@@ -889,21 +839,19 @@
            document.getElementById('newFoodFat').value = '';
            
            populateFoodsTable();
-           saveData(); // Salva automaticamente
-           alert(`Alimento "${name}" aggiunto!`);
+           saveData();
+           alert('Alimento "' + name + '" aggiunto!');
        }
 
-       // Elimina alimento
        function deleteFood(foodName) {
-           if (confirm(`Eliminare "${foodName}"?`)) {
+           if (confirm('Eliminare "' + foodName + '"?')) {
                delete foods[foodName];
                populateFoodsTable();
-               saveData(); // Salva automaticamente
-               alert(`"${foodName}" eliminato!`);
+               saveData();
+               alert('"' + foodName + '" eliminato!');
            }
        }
 
-       // Cerca alimenti
        function searchFoods() {
            const searchTerm = document.getElementById('searchFood').value.toLowerCase();
            const rows = document.getElementById('foodsTableBody').getElementsByTagName('tr');
@@ -914,7 +862,6 @@
            }
        }
 
-       // Inizializza app
        document.addEventListener('DOMContentLoaded', function() {
            initData();
            createDays();
