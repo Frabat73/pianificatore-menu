@@ -507,6 +507,11 @@
             transform: scale(1.05);
         }
 
+        .test-row {
+            background: #ffeb3b !important;
+            border: 3px solid #ff9800 !important;
+        }
+
         @media (max-width: 1200px) {
             .add-food-form {
                 grid-template-columns: 1fr 1fr 1fr;
@@ -710,19 +715,16 @@
         });
 
         function switchTab(tabName) {
-            // Nascondi tutti i contenuti delle tab
             var tabs = document.querySelectorAll('.tab-content');
             for (var i = 0; i < tabs.length; i++) {
                 tabs[i].classList.remove('active');
             }
             
-            // Rimuovi active da tutti i bottoni
             var buttons = document.querySelectorAll('.tab-button');
             for (var i = 0; i < buttons.length; i++) {
                 buttons[i].classList.remove('active');
             }
             
-            // Mostra la tab selezionata
             document.getElementById(tabName + '-tab').classList.add('active');
             event.target.classList.add('active');
         }
@@ -749,37 +751,83 @@
             }
         }
 
+        // Funzione di eliminazione semplificata
+        function testDelete(id, nome) {
+            console.log('ðŸ—‘ï¸ Eliminazione richiesta per:', nome, 'ID:', id);
+            
+            if (confirm('Eliminare davvero "' + nome + '"?')) {
+                console.log('âœ… Utente ha confermato eliminazione');
+                
+                // Elimina dall'array
+                var newDatabase = [];
+                for (var i = 0; i < foodDatabase.length; i++) {
+                    if (foodDatabase[i].id != id) {
+                        newDatabase.push(foodDatabase[i]);
+                    }
+                }
+                
+                var oldCount = foodDatabase.length;
+                foodDatabase = newDatabase;
+                var newCount = foodDatabase.length;
+                
+                console.log('ðŸ“Š Database: prima ' + oldCount + ' â†’ dopo ' + newCount + ' alimenti');
+                
+                if (newCount < oldCount) {
+                    saveDatabase();
+                    populateFoodTable();
+                    console.log('âœ… Eliminazione completata con successo');
+                    alert('Alimento "' + nome + '" eliminato!');
+                } else {
+                    console.error('âŒ Errore: alimento non eliminato');
+                    alert('Errore nell\'eliminazione');
+                }
+            } else {
+                console.log('âŒ Utente ha annullato eliminazione');
+            }
+        }
+
         function populateFoodTable() {
             var tbody = document.getElementById('foodTableBody');
-            if (!tbody) return;
+            if (!tbody) {
+                console.error('âŒ Elemento foodTableBody non trovato');
+                return;
+            }
             
-            // Pulisci la tabella prima
+            console.log('ðŸ”„ Popolamento tabella con ' + foodDatabase.length + ' alimenti');
+            
+            // Pulisci tabella
             tbody.innerHTML = '';
             
+            // Riga di test GIALLA
+            var testRow = document.createElement('tr');
+            testRow.className = 'test-row';
+            testRow.innerHTML = '<td colspan="6" style="text-align: center; padding: 20px; background: #ffeb3b; border: 3px solid #ff9800;">' +
+                '<button onclick="alert(\'ðŸ§ª JavaScript funziona!\'); console.log(\'âœ… TEST RIUSCITO\');" ' +
+                'style="background: #4CAF50; color: white; padding: 15px 30px; font-size: 18px; border: none; border-radius: 8px; cursor: pointer;">' +
+                'ðŸ§ª TEST JAVASCRIPT - CLICCA QUI' +
+                '</button></td>';
+            tbody.appendChild(testRow);
+            
+            // Aggiungi gli alimenti
             for (var i = 0; i < foodDatabase.length; i++) {
                 var food = foodDatabase[i];
-                var row = document.createElement('tr');
                 
+                var row = document.createElement('tr');
                 row.innerHTML = '<td><strong>' + food.nome + '</strong></td>' +
                     '<td>' + food.calorie + '</td>' +
                     '<td>' + food.proteine + '</td>' +
                     '<td>' + food.carboidrati + '</td>' +
                     '<td>' + food.grassi + '</td>' +
-                    '<td><button class="delete-food-btn" data-food-id="' + food.id + '">ðŸ—‘ï¸</button></td>';
-                
+                    '<td>' +
+                        '<button onclick="testDelete(' + food.id + ', \'' + food.nome.replace(/'/g, "\\'") + '\');" ' +
+                        'style="background: #dc3545; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 14px;">' +
+                        'ðŸ—‘ï¸ Elimina' +
+                        '</button>' +
+                    '</td>';
                 tbody.appendChild(row);
             }
             
-            // Aggiungi event listener ai pulsanti elimina
-            var deleteButtons = tbody.querySelectorAll('.delete-food-btn');
-            for (var i = 0; i < deleteButtons.length; i++) {
-                deleteButtons[i].addEventListener('click', function(e) {
-                    var foodId = parseInt(e.target.getAttribute('data-food-id'));
-                    deleteFood(foodId);
-                });
-            }
-            
-            console.log('Tabella aggiornata con', foodDatabase.length, 'alimenti e', deleteButtons.length, 'pulsanti elimina');
+            console.log('âœ… Tabella creata: 1 riga test + ' + foodDatabase.length + ' alimenti');
         }
 
         function addNewFood() {
@@ -813,16 +861,8 @@
             document.getElementById('newFoodProteins').value = '';
             document.getElementById('newFoodCarbs').value = '';
             document.getElementById('newFoodFats').value = '';
-        }
 
-        function deleteFood(foodId) {
-            if (confirm('Sei sicuro di voler eliminare questo alimento?')) {
-                foodDatabase = foodDatabase.filter(function(food) {
-                    return food.id !== foodId;
-                });
-                saveDatabase();
-                populateFoodTable();
-            }
+            console.log('âœ… Nuovo alimento aggiunto:', nome);
         }
 
         function createWeekContainer() {
@@ -994,7 +1034,6 @@
             var foodsDiv = document.getElementById('foods-' + giorno + '-' + pasto);
             var foods = mealPlan[giorno][pasto];
             
-            // Calcola totali del pasto
             var mealCal = 0;
             for (var i = 0; i < foods.length; i++) {
                 var food = foods[i];
@@ -1002,7 +1041,6 @@
                 mealCal += food.calorie * factor;
             }
             
-            // Aggiorna lista alimenti del pasto
             var html = '';
             for (var i = 0; i < foods.length; i++) {
                 var food = foods[i];
@@ -1022,7 +1060,6 @@
             }
             foodsDiv.innerHTML = html;
             
-            // Aggiorna totale del pasto
             var mealTotalEl = document.getElementById('mealTotal-' + giorno + '-' + pasto);
             if (mealTotalEl) {
                 mealTotalEl.textContent = Math.round(mealCal) + ' cal';
@@ -1045,13 +1082,11 @@
                 }
             }
             
-            // Calcola percentuali per il giorno
             var totalCaloriesFromMacros = (totalCarb * 4) + (totalProt * 4) + (totalFat * 9);
             var carbPerc = totalCaloriesFromMacros > 0 ? (totalCarb * 4 / totalCaloriesFromMacros * 100) : 0;
             var protPerc = totalCaloriesFromMacros > 0 ? (totalProt * 4 / totalCaloriesFromMacros * 100) : 0;
             var fatPerc = totalCaloriesFromMacros > 0 ? (totalFat * 9 / totalCaloriesFromMacros * 100) : 0;
             
-            // Aggiorna totali giornalieri
             var dayTotalEl = document.getElementById('dayTotal-' + giorno);
             var totalCalEl = document.getElementById('totalCal-' + giorno);
             var totalCarbEl = document.getElementById('totalCarb-' + giorno);
@@ -1064,7 +1099,6 @@
             if (totalProtEl) totalProtEl.textContent = Math.round(totalProt) + 'g';
             if (totalFatEl) totalFatEl.textContent = Math.round(totalFat) + 'g';
             
-            // Aggiorna percentuali giornaliere
             var carbPercEl = document.getElementById('carbPerc-' + giorno);
             var protPercEl = document.getElementById('protPerc-' + giorno);
             var fatPercEl = document.getElementById('fatPerc-' + giorno);
@@ -1095,7 +1129,6 @@
                     }
                 }
                 
-                // Conta solo i giorni che hanno almeno qualche cibo
                 if (dayCal > 0) {
                     daysWithFood++;
                     totalCal += dayCal;
@@ -1105,19 +1138,16 @@
                 }
             }
             
-            // Media solo dei giorni compilati
             var avgCal = daysWithFood > 0 ? totalCal / daysWithFood : 0;
             var avgCarb = daysWithFood > 0 ? totalCarb / daysWithFood : 0;
             var avgProt = daysWithFood > 0 ? totalProt / daysWithFood : 0;
             var avgFat = daysWithFood > 0 ? totalFat / daysWithFood : 0;
             
-            // Calcola percentuali della media
             var totalCalories = (avgCarb * 4) + (avgProt * 4) + (avgFat * 9);
             var carbPerc = totalCalories > 0 ? (avgCarb * 4 / totalCalories * 100) : 0;
             var protPerc = totalCalories > 0 ? (avgProt * 4 / totalCalories * 100) : 0;
             var fatPerc = totalCalories > 0 ? (avgFat * 9 / totalCalories * 100) : 0;
             
-            // Aggiorna display
             var avgCaloriesEl = document.getElementById('avgCalories');
             var avgProteinsEl = document.getElementById('avgProteins');
             var avgCarbsEl = document.getElementById('avgCarbs');
@@ -1128,12 +1158,10 @@
             if (avgCarbsEl) avgCarbsEl.textContent = Math.round(avgCarb) + 'g (' + Math.round(carbPerc) + '%)';
             if (avgFatsEl) avgFatsEl.textContent = Math.round(avgFat) + 'g (' + Math.round(fatPerc) + '%)';
             
-            // Aggiorna grafici
             drawCharts(carbPerc, protPerc, fatPerc);
         }
 
         function drawCharts(actualCarb, actualProt, actualFat) {
-            // Grafico target
             var targetCanvas = document.getElementById('targetChart');
             if (targetCanvas) {
                 var targetCtx = targetCanvas.getContext('2d');
@@ -1144,7 +1172,6 @@
                 ], 100, 100, 80);
             }
             
-            // Grafico attuale
             var actualCanvas = document.getElementById('actualChart');
             if (actualCanvas) {
                 var actualCtx = actualCanvas.getContext('2d');
@@ -1177,13 +1204,12 @@
                 total += data[i].value;
             }
             
-            var currentAngle = -Math.PI / 2; // Inizia dall'alto
+            var currentAngle = -Math.PI / 2;
             
             for (var i = 0; i < data.length; i++) {
                 var item = data[i];
                 var sliceAngle = (item.value / total) * 2 * Math.PI;
                 
-                // Disegna la fetta
                 ctx.fillStyle = item.color;
                 ctx.beginPath();
                 ctx.moveTo(centerX, centerY);
@@ -1191,7 +1217,6 @@
                 ctx.closePath();
                 ctx.fill();
                 
-                // Aggiungi percentuale
                 var textAngle = currentAngle + sliceAngle / 2;
                 var textX = centerX + Math.cos(textAngle) * (radius * 0.7);
                 var textY = centerY + Math.sin(textAngle) * (radius * 0.7);
@@ -1204,17 +1229,14 @@
                 currentAngle += sliceAngle;
             }
             
-            // Legenda
             var legendY = 170;
             for (var i = 0; i < data.length; i++) {
                 var item = data[i];
                 var legendX = 20 + (i * 60);
                 
-                // Quadratino colorato
                 ctx.fillStyle = item.color;
                 ctx.fillRect(legendX, legendY, 10, 10);
                 
-                // Testo
                 ctx.fillStyle = '#333';
                 ctx.font = '10px Arial';
                 ctx.textAlign = 'left';
@@ -1237,7 +1259,6 @@
             }
         }
 
-        // Event listeners
         document.addEventListener('click', function(e) {
             if (!e.target.closest('.food-input')) {
                 for (var g = 0; g < giorni.length; g++) {
@@ -1265,24 +1286,19 @@
             }
         });
 
-        // Inizializzazione
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('Inizializzazione app...');
+            console.log('ðŸš€ Inizializzazione app...');
             
-            // Carica database salvato
             loadDatabase();
-            console.log('Database caricato:', foodDatabase.length, 'alimenti');
+            console.log('ðŸ“¦ Database caricato:', foodDatabase.length, 'alimenti');
             
-            // Popola la tabella CON LA NUOVA FUNZIONE
             populateFoodTable();
             
-            // Crea i container della settimana
             createWeekContainer();
-            console.log('Container settimana creato');
+            console.log('ðŸ“… Container settimana creato');
             
-            // Aggiorna il riepilogo
             updateWeeklySummary();
-            console.log('App inizializzata con successo');
+            console.log('âœ… App inizializzata con successo');
         });
     </script>
 </body>
