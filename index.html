@@ -1,9 +1,27 @@
+
+Input campo ricerca: larghezza 100%
+Input quantità: larghezza 100% sotto il primo
+Pulsante Aggiungi: larghezza 100% sotto gli input
+Suggerimenti: sempre visibili sotto quando disponibili
+Sostituisci questo codice su GitHub e testalo da mobile - ora dovrebbe funzionare perfettamente! 📱✅
+
+mi fornisci il codice?
+
+Ecco il codice completo ottimizzato per mobile:
+
+Pianificatore Menu - Codice Completo Mobile
+Codice 
+
+
+Continua
+
+
 <!DOCTYPE html>
 <html lang="it">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ðŸ½ï¸ Pianificatore Menu Settimanale</title>
+    <title>Pianificatore Menu Settimanale</title>
     <style>
         * {
             margin: 0;
@@ -507,11 +525,6 @@
             transform: scale(1.05);
         }
 
-        .test-row {
-            background: #ffeb3b !important;
-            border: 3px solid #ff9800 !important;
-        }
-
         @media (max-width: 1200px) {
             .add-food-form {
                 grid-template-columns: 1fr 1fr 1fr;
@@ -562,7 +575,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>ðŸ½ï¸ Pianificatore Menu Settimanale</h1>
+            <h1>Pianificatore Menu Settimanale</h1>
             <p>Piano alimentare da 1250 calorie per 1 settimana</p>
         </div>
         
@@ -589,15 +602,15 @@
         </div>
 
         <div class="tabs">
-            <button class="tab-button active" onclick="switchTab('planning')">ðŸ“… Pianificazione Settimanale</button>
-            <button class="tab-button" onclick="switchTab('database')">ðŸ—‚ï¸ Database Alimenti</button>
+            <button class="tab-button active" onclick="switchTab('planning')">Pianificazione Settimanale</button>
+            <button class="tab-button" onclick="switchTab('database')">Database Alimenti</button>
         </div>
         
         <div id="planning-tab" class="tab-content active">
             <div id="weekContainer"></div>
 
             <div class="weekly-summary">
-                <h2>ðŸ“Š Riepilogo Settimanale</h2>
+                <h2>Riepilogo Settimanale</h2>
                 <div class="summary-content">
                     <div class="average-stats">
                         <h3>Media Giornaliera</h3>
@@ -632,7 +645,7 @@
                 </div>
             </div>
 
-            <button class="clear-btn" onclick="clearPlanningData()">ðŸ—‘ï¸ Pulisci Pianificazione</button>
+            <button class="clear-btn" onclick="clearPlanningData()">Pulisci Pianificazione</button>
         </div>
 
         <div id="database-tab" class="tab-content">
@@ -659,7 +672,7 @@
                         <label>Grassi (g)</label>
                         <input type="number" id="newFoodFats" placeholder="3">
                     </div>
-                    <button class="add-food-btn" onclick="addNewFood()">âž• Aggiungi</button>
+                    <button class="add-food-btn" onclick="addNewFood()">Aggiungi</button>
                 </div>
             </div>
 
@@ -681,8 +694,7 @@
     </div>
 
     <script>
-        // Database alimenti completo
-        let foodDatabase = [
+        var foodDatabase = [
             { nome: "Pasta integrale", calorie: 350, proteine: 13, carboidrati: 71, grassi: 3, id: 1 },
             { nome: "Riso basmati", calorie: 345, proteine: 8, carboidrati: 78, grassi: 1, id: 2 },
             { nome: "Pollo petto", calorie: 165, proteine: 31, carboidrati: 0, grassi: 4, id: 3 },
@@ -700,24 +712,25 @@
             { nome: "Tonno", calorie: 144, proteine: 30, carboidrati: 0, grassi: 1, id: 15 }
         ];
 
-        const giorni = ['LunedÃ¬', 'MartedÃ¬', 'MercoledÃ¬', 'GiovedÃ¬', 'VenerdÃ¬', 'Sabato', 'Domenica'];
-        const pasti = ['colazione', 'pranzo', 'cena'];
+        var giorni = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
+        var pasti = ['colazione', 'pranzo', 'cena'];
         
-        let mealPlan = {};
-        let selectedFoods = {};
+        var mealPlan = {};
+        var selectedFoods = {};
 
-        // Inizializza struttura dati
-        giorni.forEach(function(giorno) {
+        for (var g = 0; g < giorni.length; g++) {
+            var giorno = giorni[g];
             mealPlan[giorno] = {};
-            pasti.forEach(function(pasto) {
+            for (var p = 0; p < pasti.length; p++) {
+                var pasto = pasti[p];
                 mealPlan[giorno][pasto] = [];
-            });
-        });
+            }
+        }
 
         function switchTab(tabName) {
             var tabs = document.querySelectorAll('.tab-content');
             for (var i = 0; i < tabs.length; i++) {
-                tabs[i].classList.remove('active');
+                tabs[i].style.display = 'none';
             }
             
             var buttons = document.querySelectorAll('.tab-button');
@@ -725,7 +738,7 @@
                 buttons[i].classList.remove('active');
             }
             
-            document.getElementById(tabName + '-tab').classList.add('active');
+            document.getElementById(tabName + '-tab').style.display = 'block';
             event.target.classList.add('active');
         }
 
@@ -751,83 +764,40 @@
             }
         }
 
-        // Funzione di eliminazione semplificata
-        function testDelete(id, nome) {
-            console.log('ðŸ—‘ï¸ Eliminazione richiesta per:', nome, 'ID:', id);
-            
-            if (confirm('Eliminare davvero "' + nome + '"?')) {
-                console.log('âœ… Utente ha confermato eliminazione');
-                
-                // Elimina dall'array
-                var newDatabase = [];
+        function deleteFood(id, nome) {
+            if (confirm('Eliminare "' + nome + '"?')) {
                 for (var i = 0; i < foodDatabase.length; i++) {
-                    if (foodDatabase[i].id != id) {
-                        newDatabase.push(foodDatabase[i]);
+                    if (foodDatabase[i].id == id) {
+                        foodDatabase.splice(i, 1);
+                        break;
                     }
                 }
-                
-                var oldCount = foodDatabase.length;
-                foodDatabase = newDatabase;
-                var newCount = foodDatabase.length;
-                
-                console.log('ðŸ“Š Database: prima ' + oldCount + ' â†’ dopo ' + newCount + ' alimenti');
-                
-                if (newCount < oldCount) {
-                    saveDatabase();
-                    populateFoodTable();
-                    console.log('âœ… Eliminazione completata con successo');
-                    alert('Alimento "' + nome + '" eliminato!');
-                } else {
-                    console.error('âŒ Errore: alimento non eliminato');
-                    alert('Errore nell\'eliminazione');
-                }
-            } else {
-                console.log('âŒ Utente ha annullato eliminazione');
+                saveDatabase();
+                populateFoodTable();
+                alert('Alimento "' + nome + '" eliminato!');
             }
         }
 
         function populateFoodTable() {
             var tbody = document.getElementById('foodTableBody');
-            if (!tbody) {
-                console.error('âŒ Elemento foodTableBody non trovato');
-                return;
-            }
+            if (!tbody) return;
             
-            console.log('ðŸ”„ Popolamento tabella con ' + foodDatabase.length + ' alimenti');
-            
-            // Pulisci tabella
             tbody.innerHTML = '';
             
-            // Riga di test GIALLA
-            var testRow = document.createElement('tr');
-            testRow.className = 'test-row';
-            testRow.innerHTML = '<td colspan="6" style="text-align: center; padding: 20px; background: #ffeb3b; border: 3px solid #ff9800;">' +
-                '<button onclick="alert(\'ðŸ§ª JavaScript funziona!\'); console.log(\'âœ… TEST RIUSCITO\');" ' +
-                'style="background: #4CAF50; color: white; padding: 15px 30px; font-size: 18px; border: none; border-radius: 8px; cursor: pointer;">' +
-                'ðŸ§ª TEST JAVASCRIPT - CLICCA QUI' +
-                '</button></td>';
-            tbody.appendChild(testRow);
-            
-            // Aggiungi gli alimenti
             for (var i = 0; i < foodDatabase.length; i++) {
                 var food = foodDatabase[i];
+                var row = tbody.insertRow();
                 
-                var row = document.createElement('tr');
                 row.innerHTML = '<td><strong>' + food.nome + '</strong></td>' +
                     '<td>' + food.calorie + '</td>' +
                     '<td>' + food.proteine + '</td>' +
                     '<td>' + food.carboidrati + '</td>' +
                     '<td>' + food.grassi + '</td>' +
                     '<td>' +
-                        '<button onclick="testDelete(' + food.id + ', \'' + food.nome.replace(/'/g, "\\'") + '\');" ' +
-                        'style="background: #dc3545; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 14px;">' +
-                        'ðŸ—‘ï¸ Elimina' +
-                        '</button>' +
+                        '<button onclick="deleteFood(' + food.id + ', \'' + food.nome + '\')" ' +
+                        'class="delete-food-btn">Elimina</button>' +
                     '</td>';
-                tbody.appendChild(row);
             }
-            
-            console.log('âœ… Tabella creata: 1 riga test + ' + foodDatabase.length + ' alimenti');
         }
 
         function addNewFood() {
@@ -838,7 +808,7 @@
             var grassi = parseFloat(document.getElementById('newFoodFats').value);
 
             if (!nome || isNaN(calorie) || isNaN(proteine) || isNaN(carboidrati) || isNaN(grassi)) {
-                alert('Compila tutti i campi con valori validi!');
+                alert('Compila tutti i campi!');
                 return;
             }
 
@@ -855,14 +825,13 @@
             saveDatabase();
             populateFoodTable();
 
-            // Pulisci i campi
             document.getElementById('newFoodName').value = '';
             document.getElementById('newFoodCalories').value = '';
             document.getElementById('newFoodProteins').value = '';
             document.getElementById('newFoodCarbs').value = '';
             document.getElementById('newFoodFats').value = '';
 
-            console.log('âœ… Nuovo alimento aggiunto:', nome);
+            alert('Alimento "' + nome + '" aggiunto!');
         }
 
         function createWeekContainer() {
@@ -998,7 +967,6 @@
             
             mealPlan[giorno][pasto].push(foodItem);
             
-            // Reset
             document.getElementById('input-' + giorno + '-' + pasto).value = '';
             document.getElementById('quantity-' + giorno + '-' + pasto).value = '100';
             selectedFoods[giorno + '-' + pasto] = null;
@@ -1055,7 +1023,7 @@
                             Math.round(food.grassi * factor) + 'g grassi' +
                         '</div>' +
                     '</div>' +
-                    '<button class="remove-btn" onclick="removeFood(\'' + giorno + '\', \'' + pasto + '\', ' + food.itemId + ')">âœ•</button>' +
+                    '<button class="remove-btn" onclick="removeFood(\'' + giorno + '\', \'' + pasto + '\', ' + food.itemId + ')">X</button>' +
                 '</div>';
             }
             foodsDiv.innerHTML = html;
@@ -1260,7 +1228,23 @@
         }
 
         document.addEventListener('click', function(e) {
+            // Non nascondere i suggerimenti se si clicca su di essi
+            if (e.target.closest('.suggestion-item')) {
+                return;
+            }
+            
             if (!e.target.closest('.food-input')) {
+                for (var g = 0; g < giorni.length; g++) {
+                    for (var p = 0; p < pasti.length; p++) {
+                        hideSuggestions(giorni[g], pasti[p]);
+                    }
+                }
+            }
+        });
+
+        // Touch events per mobile
+        document.addEventListener('touchstart', function(e) {
+            if (!e.target.closest('.food-input') && !e.target.closest('.suggestion-item')) {
                 for (var g = 0; g < giorni.length; g++) {
                     for (var p = 0; p < pasti.length; p++) {
                         hideSuggestions(giorni[g], pasti[p]);
@@ -1287,18 +1271,10 @@
         });
 
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('ðŸš€ Inizializzazione app...');
-            
             loadDatabase();
-            console.log('ðŸ“¦ Database caricato:', foodDatabase.length, 'alimenti');
-            
             populateFoodTable();
-            
             createWeekContainer();
-            console.log('ðŸ“… Container settimana creato');
-            
             updateWeeklySummary();
-            console.log('âœ… App inizializzata con successo');
         });
     </script>
 </body>
