@@ -696,43 +696,6 @@
         ];
 
         let foodDatabase = [];
-
-        // Funzione per inizializzare il database
-        function initializeDatabase() {
-            console.log('Inizializzazione database...');
-            try {
-                const saved = localStorage.getItem('foodDatabase');
-                if (saved && saved !== 'null' && saved !== 'undefined') {
-                    const parsed = JSON.parse(saved);
-                    if (Array.isArray(parsed) && parsed.length > 0) {
-                        foodDatabase = parsed;
-                        console.log('Database caricato dal localStorage:', foodDatabase.length, 'alimenti');
-                    } else {
-                        foodDatabase = [...DEFAULT_FOODS];
-                        saveDatabase();
-                        console.log('Creato nuovo database con alimenti di default');
-                    }
-                } else {
-                    foodDatabase = [...DEFAULT_FOODS];
-                    saveDatabase();
-                    console.log('Inizializzato database con alimenti di default');
-                }
-            } catch (error) {
-                console.error('Errore nell\'inizializzazione del database:', error);
-                foodDatabase = [...DEFAULT_FOODS];
-                saveDatabase();
-            }
-            
-            // Assicurati che sia sempre un array
-            if (!Array.isArray(foodDatabase)) {
-                console.warn('foodDatabase non era un array, ripristino default');
-                foodDatabase = [...DEFAULT_FOODS];
-                saveDatabase();
-            }
-            
-            console.log('Database inizializzato correttamente:', foodDatabase.length, 'alimenti');
-        }
-
         const giorni = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
         const pasti = ['colazione', 'pranzo', 'cena'];
         
@@ -764,13 +727,10 @@
         }
 
         function saveDatabase() {
-            console.log('Salvataggio database...');
             try {
                 if (Array.isArray(foodDatabase) && foodDatabase.length >= 0) {
                     localStorage.setItem('foodDatabase', JSON.stringify(foodDatabase));
-                    console.log('Database salvato con successo');
                 } else {
-                    console.error('Il database non è un array valido, ripristino default');
                     foodDatabase = [...DEFAULT_FOODS];
                     localStorage.setItem('foodDatabase', JSON.stringify(foodDatabase));
                 }
@@ -782,24 +742,16 @@
 
         function populateFoodTable() {
             const tbody = document.getElementById('foodTableBody');
-            if (!tbody) {
-                console.error('Elemento foodTableBody non trovato');
-                return;
-            }
+            if (!tbody) return;
             
-            // Verifica che foodDatabase sia un array
             if (!Array.isArray(foodDatabase)) {
-                console.error('foodDatabase non è un array, reinizializzo');
                 foodDatabase = [...DEFAULT_FOODS];
                 saveDatabase();
             }
             
             try {
                 tbody.innerHTML = foodDatabase.map(food => {
-                    if (!food || typeof food !== 'object') {
-                        console.warn('Alimento non valido trovato:', food);
-                        return '';
-                    }
+                    if (!food || typeof food !== 'object') return '';
                     return `
                         <tr>
                             <td><strong>${food.nome || 'N/A'}</strong></td>
@@ -815,7 +767,7 @@
                 }).filter(row => row !== '').join('');
             } catch (error) {
                 console.error('Errore nella creazione della tabella:', error);
-                tbody.innerHTML = '<tr><td colspan="6" style="color: red; text-align: center;">Errore nel caricamento degli alimenti. Ricarica la pagina.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" style="color: red; text-align: center;">Errore nel caricamento degli alimenti.</td></tr>';
             }
         }
 
@@ -854,27 +806,524 @@
 
         function deleteFood(foodId) {
             if (confirm('Sei sicuro di voler eliminare questo alimento dal database?')) {
-                console.log('Tentativo di eliminazione alimento con ID:', foodId);
-                
-                // Verifica che foodDatabase sia un array
-                if (!Array.isArray(foodDatabase)) {
-                    console.error('foodDatabase non è un array');
-                    return;
-                }
+                if (!Array.isArray(foodDatabase)) return;
                 
                 const originalLength = foodDatabase.length;
                 foodDatabase = foodDatabase.filter(food => food.id !== parseInt(foodId));
                 
-                console.log('Alimenti prima:', originalLength, 'dopo:', foodDatabase.length);
-                
                 if (foodDatabase.length < originalLength) {
                     saveDatabase();
                     populateFoodTable();
-                    console.log('Alimento eliminato con successo');
-                } else {
-                    console.error('Alimento non trovato o non eliminato');
                 }
             }
         }
 
         function createWeekContainer() {
+            const container = document.getElementById('weekContainer');
+            
+            giorni.forEach(giorno => {
+                const dayDiv = document.createElement('div');
+                dayDiv.className = 'day-container';
+                
+                const mealsHTML = pasti.map(pasto => `
+                    <div class="meal-section">
+                        <div class="meal-header">
+                            <div class="meal-title ${pasto}">${pasto.charAt(0).toUpperCase() + pasto.slice(1)}</div>
+                            <div class="meal-total" id="mealTotal-${giorno}-${pasto}">0 cal</div>
+                        </div>
+                        <div class="food-input">
+                            <input type="text" 
+                                   placeholder="Cerca alimento (min 3 lettere)..." 
+                                   id="input-${giorno}-${pasto}"
+                                   oninput="handleFoodInput('${giorno}', '${pasto}')"
+                                   onblur="setTimeout(() => hideSuggestions('${giorno}', '${pasto}'), 200)">
+                            <input type="number" 
+                                   class="quantity-input"
+                                   placeholder="100g" 
+                                   id="quantity-${giorno}-${pasto}"
+                                   min="1"
+                                   value="100">
+                            <button onclick="addSelectedFood('${giorno}', '${pasto}')" class="add-btn">Aggiungi</button>
+                            <div class="suggestions" id="suggestions-${giorno}-${pasto}"></div>
+                        </div>
+                        <div class="added-foods" id="foods-${giorno}-${pasto}"></div>
+                    </div>
+                `).join('');
+                
+                dayDiv.innerHTML = `
+                    <div class="day-header">
+                        <span>${giorno}</span>
+                        <span id="dayTotal-${giorno}">0 cal</span>
+                    </div>
+                    <div class="day-content">
+                        ${mealsHTML}
+                        <div class="day-totals">
+                            <h4>Totali Giornalieri</h4>
+                            <div class="totals-grid">
+                                <div class="total-item">
+                                    <div class="total-value" id="totalCal-${giorno}">0</div>
+                                    <div class="total-label">Calorie</div>
+                                </div>
+                                <div class="total-item">
+                                    <div class="total-value" id="totalCarb-${giorno}">0g</div>
+                                    <div class="total-label">Carboidrati</div>
+                                </div>
+                                <div class="total-item">
+                                    <div class="total-value" id="totalProt-${giorno}">0g</div>
+                                    <div class="total-label">Proteine</div>
+                                </div>
+                                <div class="total-item">
+                                    <div class="total-value" id="totalFat-${giorno}">0g</div>
+                                    <div class="total-label">Grassi</div>
+                                </div>
+                            </div>
+                            <div class="percentages-grid">
+                                <div class="percentage-item">
+                                    <div class="percentage-value" id="carbPerc-${giorno}">0%</div>
+                                    <div class="percentage-label">% Carboidrati</div>
+                                </div>
+                                <div class="percentage-item">
+                                    <div class="percentage-value" id="protPerc-${giorno}">0%</div>
+                                    <div class="percentage-label">% Proteine</div>
+                                </div>
+                                <div class="percentage-item">
+                                    <div class="percentage-value" id="fatPerc-${giorno}">0%</div>
+                                    <div class="percentage-label">% Grassi</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(dayDiv);
+            });
+        }
+
+        function handleFoodInput(giorno, pasto) {
+            const input = document.getElementById(`input-${giorno}-${pasto}`);
+            const query = input.value.trim().toLowerCase();
+            const suggestionsDiv = document.getElementById(`suggestions-${giorno}-${pasto}`);
+            
+            if (!input || !suggestionsDiv) return;
+            
+            if (!Array.isArray(foodDatabase)) {
+                foodDatabase = [...DEFAULT_FOODS];
+                saveDatabase();
+            }
+            
+            if (query.length >= 3) {
+                try {
+                    const matches = foodDatabase.filter(food => {
+                        if (!food || !food.nome) return false;
+                        return food.nome.toLowerCase().includes(query);
+                    });
+                    
+                    if (matches.length > 0) {
+                        suggestionsDiv.innerHTML = matches.map(food => `
+                            <div class="suggestion-item" onclick="selectFoodForMeal('${(food.nome || '').replace(/'/g, '\\\')}', '${giorno}', '${pasto}')">
+                                <div><strong>${food.nome || 'N/A'}</strong></div>
+                                <div style="font-size: 12px; color: #666;">
+                                    ${food.calorie || 0} cal | ${food.proteine || 0}g prot | ${food.carboidrati || 0}g carb | ${food.grassi || 0}g grassi
+                                </div>
+                            </div>
+                        `).join('');
+                        suggestionsDiv.style.display = 'block';
+                    } else {
+                        suggestionsDiv.style.display = 'none';
+                    }
+                } catch (error) {
+                    console.error('Errore nella ricerca degli alimenti:', error);
+                    suggestionsDiv.style.display = 'none';
+                }
+            } else {
+                suggestionsDiv.style.display = 'none';
+            }
+        }
+
+        function selectFoodForMeal(foodName, giorno, pasto) {
+            if (!Array.isArray(foodDatabase)) {
+                foodDatabase = [...DEFAULT_FOODS];
+                saveDatabase();
+            }
+            
+            const food = foodDatabase.find(f => f && f.nome === foodName);
+            if (food) {
+                selectedFoods[`${giorno}-${pasto}`] = food;
+                const input = document.getElementById(`input-${giorno}-${pasto}`);
+                if (input) {
+                    input.value = foodName;
+                }
+                hideSuggestions(giorno, pasto);
+            }
+        }
+
+        function addSelectedFood(giorno, pasto) {
+            const selectedFood = selectedFoods[`${giorno}-${pasto}`];
+            if (!selectedFood) {
+                alert('Seleziona prima un alimento dalla lista!');
+                return;
+            }
+            
+            const quantity = parseFloat(document.getElementById(`quantity-${giorno}-${pasto}`).value) || 100;
+            
+            const foodItem = {
+                ...selectedFood,
+                quantity: quantity,
+                itemId: Date.now() + Math.random()
+            };
+            
+            mealPlan[giorno][pasto].push(foodItem);
+            
+            // Reset
+            document.getElementById(`input-${giorno}-${pasto}`).value = '';
+            document.getElementById(`quantity-${giorno}-${pasto}`).value = '100';
+            selectedFoods[`${giorno}-${pasto}`] = null;
+            
+            updateMealDisplay(giorno, pasto);
+            updateDayTotals(giorno);
+            updateWeeklySummary();
+        }
+
+        function hideSuggestions(giorno, pasto) {
+            const suggestionsDiv = document.getElementById(`suggestions-${giorno}-${pasto}`);
+            if (suggestionsDiv) {
+                suggestionsDiv.style.display = 'none';
+            }
+        }
+
+        function removeFood(giorno, pasto, itemId) {
+            mealPlan[giorno][pasto] = mealPlan[giorno][pasto].filter(food => food.itemId !== itemId);
+            updateMealDisplay(giorno, pasto);
+            updateDayTotals(giorno);
+            updateWeeklySummary();
+        }
+
+        function updateMealDisplay(giorno, pasto) {
+            const foodsDiv = document.getElementById(`foods-${giorno}-${pasto}`);
+            const foods = mealPlan[giorno][pasto];
+            
+            // Calcola totali del pasto
+            let mealCal = 0;
+            foods.forEach(food => {
+                const factor = food.quantity / 100;
+                mealCal += food.calorie * factor;
+            });
+            
+            // Aggiorna lista alimenti del pasto
+            foodsDiv.innerHTML = foods.map(food => {
+                const factor = food.quantity / 100;
+                return `
+                    <div class="added-food-item">
+                        <div class="food-details">
+                            <div class="food-name">${food.nome} (${food.quantity}g)</div>
+                            <div class="food-stats">
+                                ${Math.round(food.calorie * factor)} cal | 
+                                ${Math.round(food.proteine * factor)}g prot | 
+                                ${Math.round(food.carboidrati * factor)}g carb | 
+                                ${Math.round(food.grassi * factor)}g grassi
+                            </div>
+                        </div>
+                        <button class="remove-btn" onclick="removeFood('${giorno}', '${pasto}', ${food.itemId})">✕</button>
+                    </div>
+                `;
+            }).join('');
+            
+            // Aggiorna totale del pasto
+            const mealTotalEl = document.getElementById(`mealTotal-${giorno}-${pasto}`);
+            if (mealTotalEl) {
+                mealTotalEl.textContent = Math.round(mealCal) + ' cal';
+            }
+        }
+
+        function updateDayTotals(giorno) {
+            let totalCal = 0, totalCarb = 0, totalProt = 0, totalFat = 0;
+            
+            pasti.forEach(pasto => {
+                mealPlan[giorno][pasto].forEach(food => {
+                    const factor = food.quantity / 100;
+                    totalCal += food.calorie * factor;
+                    totalCarb += food.carboidrati * factor;
+                    totalProt += food.proteine * factor;
+                    totalFat += food.grassi * factor;
+                });
+            });
+            
+            // Calcola percentuali per il giorno
+            const totalCaloriesFromMacros = (totalCarb * 4) + (totalProt * 4) + (totalFat * 9);
+            const carbPerc = totalCaloriesFromMacros > 0 ? (totalCarb * 4 / totalCaloriesFromMacros * 100) : 0;
+            const protPerc = totalCaloriesFromMacros > 0 ? (totalProt * 4 / totalCaloriesFromMacros * 100) : 0;
+            const fatPerc = totalCaloriesFromMacros > 0 ? (totalFat * 9 / totalCaloriesFromMacros * 100) : 0;
+            
+            // Aggiorna totali giornalieri
+            const dayTotalEl = document.getElementById(`dayTotal-${giorno}`);
+            const totalCalEl = document.getElementById(`totalCal-${giorno}`);
+            const totalCarbEl = document.getElementById(`totalCarb-${giorno}`);
+            const totalProtEl = document.getElementById(`totalProt-${giorno}`);
+            const totalFatEl = document.getElementById(`totalFat-${giorno}`);
+            
+            if (dayTotalEl) dayTotalEl.textContent = Math.round(totalCal) + ' cal';
+            if (totalCalEl) totalCalEl.textContent = Math.round(totalCal);
+            if (totalCarbEl) totalCarbEl.textContent = Math.round(totalCarb) + 'g';
+            if (totalProtEl) totalProtEl.textContent = Math.round(totalProt) + 'g';
+            if (totalFatEl) totalFatEl.textContent = Math.round(totalFat) + 'g';
+            
+            // Aggiorna percentuali giornaliere
+            const carbPercEl = document.getElementById(`carbPerc-${giorno}`);
+            const protPercEl = document.getElementById(`protPerc-${giorno}`);
+            const fatPercEl = document.getElementById(`fatPerc-${giorno}`);
+            
+            if (carbPercEl) carbPercEl.textContent = Math.round(carbPerc) + '%';
+            if (protPercEl) protPercEl.textContent = Math.round(protPerc) + '%';
+            if (fatPercEl) fatPercEl.textContent = Math.round(fatPerc) + '%';
+        }
+
+        function updateWeeklySummary() {
+            let totalCal = 0, totalCarb = 0, totalProt = 0, totalFat = 0;
+            let daysWithFood = 0;
+            
+            giorni.forEach(giorno => {
+                let dayCal = 0, dayCarb = 0, dayProt = 0, dayFat = 0;
+                pasti.forEach(pasto => {
+                    mealPlan[giorno][pasto].forEach(food => {
+                        const factor = food.quantity / 100;
+                        dayCal += food.calorie * factor;
+                        dayCarb += food.carboidrati * factor;
+                        dayProt += food.proteine * factor;
+                        dayFat += food.grassi * factor;
+                    });
+                });
+                
+                // Conta solo i giorni che hanno almeno qualche cibo
+                if (dayCal > 0) {
+                    daysWithFood++;
+                    totalCal += dayCal;
+                    totalCarb += dayCarb;
+                    totalProt += dayProt;
+                    totalFat += dayFat;
+                }
+            });
+            
+            // Media solo dei giorni compilati
+            const avgCal = daysWithFood > 0 ? totalCal / daysWithFood : 0;
+            const avgCarb = daysWithFood > 0 ? totalCarb / daysWithFood : 0;
+            const avgProt = daysWithFood > 0 ? totalProt / daysWithFood : 0;
+            const avgFat = daysWithFood > 0 ? totalFat / daysWithFood : 0;
+            
+            // Calcola percentuali della media
+            const totalCalories = (avgCarb * 4) + (avgProt * 4) + (avgFat * 9);
+            const carbPerc = totalCalories > 0 ? (avgCarb * 4 / totalCalories * 100) : 0;
+            const protPerc = totalCalories > 0 ? (avgProt * 4 / totalCalories * 100) : 0;
+            const fatPerc = totalCalories > 0 ? (avgFat * 9 / totalCalories * 100) : 0;
+            
+            // Aggiorna display
+            const avgCaloriesEl = document.getElementById('avgCalories');
+            const avgProteinsEl = document.getElementById('avgProteins');
+            const avgCarbsEl = document.getElementById('avgCarbs');
+            const avgFatsEl = document.getElementById('avgFats');
+            
+            if (avgCaloriesEl) avgCaloriesEl.textContent = Math.round(avgCal) + ' cal';
+            if (avgProteinsEl) avgProteinsEl.textContent = Math.round(avgProt) + 'g (' + Math.round(protPerc) + '%)';
+            if (avgCarbsEl) avgCarbsEl.textContent = Math.round(avgCarb) + 'g (' + Math.round(carbPerc) + '%)';
+            if (avgFatsEl) avgFatsEl.textContent = Math.round(avgFat) + 'g (' + Math.round(fatPerc) + '%)';
+            
+            // Aggiorna grafici
+            drawCharts(carbPerc, protPerc, fatPerc);
+        }
+
+        function drawCharts(actualCarb, actualProt, actualFat) {
+            // Grafico target
+            const targetCanvas = document.getElementById('targetChart');
+            if (targetCanvas) {
+                const targetCtx = targetCanvas.getContext('2d');
+                drawPieChart(targetCtx, [
+                    { label: 'Carboidrati', value: 50, color: '#4facfe' },
+                    { label: 'Proteine', value: 30, color: '#ff6b6b' },
+                    { label: 'Grassi', value: 20, color: '#feca57' }
+                ], 100, 100, 80);
+            }
+            
+            // Grafico attuale
+            const actualCanvas = document.getElementById('actualChart');
+            if (actualCanvas) {
+                const actualCtx = actualCanvas.getContext('2d');
+                
+                if (actualCarb + actualProt + actualFat > 0) {
+                    drawPieChart(actualCtx, [
+                        { label: 'Carboidrati', value: actualCarb, color: '#4facfe' },
+                        { label: 'Proteine', value: actualProt, color: '#ff6b6b' },
+                        { label: 'Grassi', value: actualFat, color: '#feca57' }
+                    ], 100, 100, 80);
+                } else {
+                    actualCtx.clearRect(0, 0, 200, 200);
+                    actualCtx.fillStyle = '#ccc';
+                    actualCtx.beginPath();
+                    actualCtx.arc(100, 100, 80, 0, 2 * Math.PI);
+                    actualCtx.fill();
+                    actualCtx.fillStyle = 'white';
+                    actualCtx.font = '14px Arial';
+                    actualCtx.textAlign = 'center';
+                    actualCtx.fillText('Nessun dato', 100, 100);
+                }
+            }
+        }
+
+        function drawPieChart(ctx, data, centerX, centerY, radius) {
+            ctx.clearRect(0, 0, 200, 200);
+            
+            let total = data.reduce((sum, item) => sum + item.value, 0);
+            let currentAngle = -Math.PI / 2; // Inizia dall'alto
+            
+            data.forEach(item => {
+                const sliceAngle = (item.value / total) * 2 * Math.PI;
+                
+                // Disegna la fetta
+                ctx.fillStyle = item.color;
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, currentAngle, currentAngle + sliceAngle);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Aggiungi percentuale
+                const textAngle = currentAngle + sliceAngle / 2;
+                const textX = centerX + Math.cos(textAngle) * (radius * 0.7);
+                const textY = centerY + Math.sin(textAngle) * (radius * 0.7);
+                
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 12px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(Math.round(item.value) + '%', textX, textY);
+                
+                currentAngle += sliceAngle;
+            });
+            
+            // Legenda
+            let legendY = 170;
+            data.forEach((item, index) => {
+                const legendX = 20 + (index * 60);
+                
+                // Quadratino colorato
+                ctx.fillStyle = item.color;
+                ctx.fillRect(legendX, legendY, 10, 10);
+                
+                // Testo
+                ctx.fillStyle = '#333';
+                ctx.font = '10px Arial';
+                ctx.textAlign = 'left';
+                ctx.fillText(item.label.substring(0, 8), legendX + 15, legendY + 8);
+            });
+        }
+
+        function clearPlanningData() {
+            if (confirm('Sei sicuro di voler cancellare tutta la pianificazione settimanale?')) {
+                giorni.forEach(giorno => {
+                    pasti.forEach(pasto => {
+                        mealPlan[giorno][pasto] = [];
+                        updateMealDisplay(giorno, pasto);
+                    });
+                    updateDayTotals(giorno);
+                });
+                updateWeeklySummary();
+            }
+        }
+
+        // Nascondi suggerimenti quando si clicca fuori
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.food-input')) {
+                giorni.forEach(giorno => {
+                    pasti.forEach(pasto => {
+                        hideSuggestions(giorno, pasto);
+                    });
+                });
+            }
+        });
+
+        // Gestione Enter per aggiungere alimenti
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                if (e.target.id && e.target.id.startsWith('input-')) {
+                    const parts = e.target.id.replace('input-', '').split('-');
+                    if (parts.length >= 2) {
+                        const giorno = parts[0];
+                        const pasto = parts[1];
+                        addSelectedFood(giorno, pasto);
+                    }
+                } else if (e.target.id === 'newFoodName' || e.target.id === 'newFoodCalories' || 
+                          e.target.id === 'newFoodProteins' || e.target.id === 'newFoodCarbs' || 
+                          e.target.id === 'newFoodFats') {
+                    addNewFood();
+                }
+            }
+        });
+
+        // Inizializza l'applicazione
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Inizializzazione app...');
+            
+            // Definisco gli alimenti di default direttamente qui
+            const DEFAULT_FOODS_LOCAL = [
+                { nome: "Pasta integrale", calorie: 350, proteine: 13, carboidrati: 71, grassi: 3, id: 1 },
+                { nome: "Riso basmati", calorie: 345, proteine: 8, carboidrati: 78, grassi: 1, id: 2 },
+                { nome: "Pollo petto", calorie: 165, proteine: 31, carboidrati: 0, grassi: 4, id: 3 },
+                { nome: "Salmone", calorie: 208, proteine: 20, carboidrati: 0, grassi: 13, id: 4 },
+                { nome: "Broccoli", calorie: 34, proteine: 3, carboidrati: 7, grassi: 0, id: 5 },
+                { nome: "Spinaci", calorie: 23, proteine: 3, carboidrati: 4, grassi: 0, id: 6 },
+                { nome: "Carote", calorie: 41, proteine: 1, carboidrati: 10, grassi: 0, id: 7 },
+                { nome: "Patate dolci", calorie: 86, proteine: 2, carboidrati: 20, grassi: 0, id: 8 },
+                { nome: "Avocado", calorie: 160, proteine: 2, carboidrati: 9, grassi: 15, id: 9 },
+                { nome: "Banane", calorie: 89, proteine: 1, carboidrati: 23, grassi: 0, id: 10 },
+                { nome: "Mele", calorie: 52, proteine: 0, carboidrati: 14, grassi: 0, id: 11 },
+                { nome: "Yogurt greco", calorie: 59, proteine: 10, carboidrati: 4, grassi: 0, id: 12 },
+                { nome: "Mandorle", calorie: 579, proteine: 21, carboidrati: 22, grassi: 50, id: 13 },
+                { nome: "Uova", calorie: 155, proteine: 13, carboidrati: 1, grassi: 11, id: 14 },
+                { nome: "Tonno", calorie: 144, proteine: 30, carboidrati: 0, grassi: 1, id: 15 }
+            ];
+            
+            // Inizializza direttamente il database
+            try {
+                const saved = localStorage.getItem('foodDatabase');
+                if (saved && saved !== 'null' && saved !== 'undefined') {
+                    const parsed = JSON.parse(saved);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        foodDatabase = parsed;
+                        console.log('Database caricato dal localStorage:', foodDatabase.length, 'alimenti');
+                    } else {
+                        foodDatabase = [...DEFAULT_FOODS_LOCAL];
+                        localStorage.setItem('foodDatabase', JSON.stringify(foodDatabase));
+                        console.log('Creato nuovo database con alimenti di default');
+                    }
+                } else {
+                    foodDatabase = [...DEFAULT_FOODS_LOCAL];
+                    localStorage.setItem('foodDatabase', JSON.stringify(foodDatabase));
+                    console.log('Inizializzato database con alimenti di default');
+                }
+            } catch (error) {
+                console.error('Errore nell\'inizializzazione del database:', error);
+                foodDatabase = [...DEFAULT_FOODS_LOCAL];
+                localStorage.setItem('foodDatabase', JSON.stringify(foodDatabase));
+            }
+            
+            // Assicurati che sia sempre un array
+            if (!Array.isArray(foodDatabase)) {
+                console.warn('foodDatabase non era un array, ripristino default');
+                foodDatabase = [...DEFAULT_FOODS_LOCAL];
+                localStorage.setItem('foodDatabase', JSON.stringify(foodDatabase));
+            }
+            
+            console.log('Database inizializzato:', foodDatabase.length, 'alimenti');
+            
+            // Popola la tabella
+            populateFoodTable();
+            console.log('Tabella popolata');
+            
+            // Crea i container della settimana
+            createWeekContainer();
+            console.log('Container settimana creato');
+            
+            // Aggiorna il riepilogo
+            updateWeeklySummary();
+            console.log('App inizializzata con successo');
+        });
+    </script>
+</body>
+</html>
