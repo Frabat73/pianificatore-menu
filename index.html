@@ -4,13 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pianificatore Menu Settimanale</title>
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/recharts@2.8.0/umd/Recharts.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { margin: 0; font-family: system-ui, sans-serif; }
+        .pie-chart {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            position: relative;
+            margin: 0 auto;
+        }
+        .pie-slice {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            clip: rect(0, 100px, 200px, 0);
+        }
+        .pie-slice:nth-child(1) { transform: rotate(0deg); background: #8884d8; }
+        .pie-slice:nth-child(2) { transform: rotate(120deg); background: #82ca9d; }
+        .pie-slice:nth-child(3) { transform: rotate(240deg); background: #ffc658; }
     </style>
 </head>
 <body>
@@ -18,25 +34,9 @@
     
     <script type="text/babel">
         const { useState } = React;
-        const { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } = Recharts;
         
-        // Icone semplici
-        const PlusIcon = () => (
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-        );
-        
-        const TrashIcon = () => (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="3,6 5,6 21,6"></polyline>
-                <path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path>
-            </svg>
-        );
-
         const WeeklyMealPlanner = () => {
-            // Database alimenti predefinito
+            // Database alimenti
             const [foodDatabase, setFoodDatabase] = useState([
                 { id: 1, name: 'Pane integrale', calories: 247, carbs: 41.3, fats: 4.2, proteins: 13.2 },
                 { id: 2, name: 'Pollo petto', calories: 165, carbs: 0, fats: 3.6, proteins: 31 },
@@ -45,7 +45,7 @@
                 { id: 5, name: 'Olio oliva', calories: 884, carbs: 0, fats: 100, proteins: 0 }
             ]);
 
-            // Target calorico e macro
+            // Target
             const [targets, setTargets] = useState({
                 calories: 1250,
                 carbsPerc: 50,
@@ -53,36 +53,32 @@
                 proteinsPerc: 20
             });
 
-            // Calcolatore macro in grammi basato su target calorico
-            const calculateMacroGrams = () => ({
-                carbs: Math.round((targets.calories * targets.carbsPerc / 100) / 4),
-                fats: Math.round((targets.calories * targets.fatsPerc / 100) / 9),
-                proteins: Math.round((targets.calories * targets.proteinsPerc / 100) / 4)
-            });
-
-            // Struttura pasti per ogni giorno
+            // Plan settimanale
             const [weekPlan, setWeekPlan] = useState(() => {
                 const days = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì'];
                 const meals = ['Colazione', 'Spuntino', 'Pranzo', 'Cena'];
                 const plan = {};
-                
                 days.forEach(day => {
                     plan[day] = {};
                     meals.forEach(meal => {
                         plan[day][meal] = [];
                     });
                 });
-                
                 return plan;
             });
 
-            // Stati per UI
             const [activeTab, setActiveTab] = useState('planner');
             const [newFood, setNewFood] = useState({ name: '', calories: '', carbs: '', fats: '', proteins: '' });
             const [searchTerms, setSearchTerms] = useState({});
             const [suggestions, setSuggestions] = useState({});
 
-            // Gestione ricerca alimenti
+            // Funzioni
+            const calculateMacroGrams = () => ({
+                carbs: Math.round((targets.calories * targets.carbsPerc / 100) / 4),
+                fats: Math.round((targets.calories * targets.fatsPerc / 100) / 9),
+                proteins: Math.round((targets.calories * targets.proteinsPerc / 100) / 4)
+            });
+
             const handleSearch = (dayKey, mealKey, term) => {
                 const key = `${dayKey}-${mealKey}`;
                 setSearchTerms(prev => ({ ...prev, [key]: term }));
@@ -97,7 +93,6 @@
                 }
             };
 
-            // Aggiungere alimento al pasto
             const addFoodToMeal = (dayKey, mealKey, food, quantity = 100) => {
                 const key = `${dayKey}-${mealKey}`;
                 const foodWithQuantity = { ...food, quantity };
@@ -114,7 +109,6 @@
                 setSuggestions(prev => ({ ...prev, [key]: [] }));
             };
 
-            // Rimuovere alimento dal pasto
             const removeFoodFromMeal = (dayKey, mealKey, index) => {
                 setWeekPlan(prev => ({
                     ...prev,
@@ -125,7 +119,6 @@
                 }));
             };
 
-            // Calcolare totali giornalieri
             const calculateDayTotals = (dayPlan) => {
                 let totals = { calories: 0, carbs: 0, fats: 0, proteins: 0 };
                 
@@ -150,7 +143,6 @@
                 };
             };
 
-            // Calcolare media settimanale (solo giorni compilati)
             const calculateWeeklyAverage = () => {
                 const days = Object.keys(weekPlan);
                 let weeklyTotals = { calories: 0, carbs: 0, fats: 0, proteins: 0 };
@@ -168,10 +160,7 @@
                 });
                 
                 if (compiledDays === 0) {
-                    return {
-                        calories: 0, carbs: 0, fats: 0, proteins: 0,
-                        carbsPerc: 0, fatsPerc: 0, proteinsPerc: 0
-                    };
+                    return { calories: 0, carbs: 0, fats: 0, proteins: 0, carbsPerc: 0, fatsPerc: 0, proteinsPerc: 0 };
                 }
                 
                 const avgCalories = weeklyTotals.calories / compiledDays;
@@ -187,7 +176,6 @@
                 };
             };
 
-            // Aggiungere nuovo alimento al database
             const addNewFood = () => {
                 if (newFood.name && newFood.calories && newFood.carbs && newFood.fats && newFood.proteins) {
                     const food = {
@@ -203,28 +191,40 @@
                 }
             };
 
-            // Rimuovere alimento dal database
             const removeFood = (id) => {
                 setFoodDatabase(prev => prev.filter(food => food.id !== id));
             };
 
-            // Calcoli per i grafici
+            // Calcoli
             const macroGrams = calculateMacroGrams();
             const weeklyStats = calculateWeeklyAverage();
-            
-            // Dati target per grafico
-            const targetPieData = [
-                { name: 'Carboidrati', value: targets.carbsPerc, color: '#8884d8' },
-                { name: 'Grassi', value: targets.fatsPerc, color: '#82ca9d' },
-                { name: 'Proteine', value: targets.proteinsPerc, color: '#ffc658' }
-            ];
-            
-            // Dati reali per grafico
-            const actualPieData = [
-                { name: 'Carboidrati', value: weeklyStats.carbsPerc, color: '#8884d8' },
-                { name: 'Grassi', value: weeklyStats.fatsPerc, color: '#82ca9d' },
-                { name: 'Proteine', value: weeklyStats.proteinsPerc, color: '#ffc658' }
-            ];
+
+            // Grafici semplici con CSS
+            const SimpleChart = ({ data, title }) => (
+                <div className="text-center">
+                    <h3 className="font-medium mb-4">{title}</h3>
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-center space-x-4">
+                            <div className="flex items-center">
+                                <div className="w-4 h-4 bg-blue-400 mr-2"></div>
+                                <span className="text-sm">Carb: {data.carbsPerc}%</span>
+                            </div>
+                        </div>
+                        <div className="flex items-center justify-center space-x-4">
+                            <div className="flex items-center">
+                                <div className="w-4 h-4 bg-green-400 mr-2"></div>
+                                <span className="text-sm">Grassi: {data.fatsPerc}%</span>
+                            </div>
+                        </div>
+                        <div className="flex items-center justify-center space-x-4">
+                            <div className="flex items-center">
+                                <div className="w-4 h-4 bg-yellow-400 mr-2"></div>
+                                <span className="text-sm">Prot: {data.proteinsPerc}%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
 
             return (
                 <div className="min-h-screen bg-gray-50 p-4">
@@ -238,9 +238,7 @@
                             <button
                                 onClick={() => setActiveTab('planner')}
                                 className={`flex-1 py-3 px-4 text-center font-medium rounded-l-lg ${
-                                    activeTab === 'planner' 
-                                        ? 'bg-blue-500 text-white' 
-                                        : 'bg-white text-gray-700 hover:bg-gray-50'
+                                    activeTab === 'planner' ? 'bg-blue-500 text-white' : 'bg-white text-gray-700'
                                 }`}
                             >
                                 Pianificatore
@@ -248,16 +246,13 @@
                             <button
                                 onClick={() => setActiveTab('database')}
                                 className={`flex-1 py-3 px-4 text-center font-medium rounded-r-lg ${
-                                    activeTab === 'database' 
-                                        ? 'bg-blue-500 text-white' 
-                                        : 'bg-white text-gray-700 hover:bg-gray-50'
+                                    activeTab === 'database' ? 'bg-blue-500 text-white' : 'bg-white text-gray-700'
                                 }`}
                             >
                                 Database Alimenti
                             </button>
                         </div>
 
-                        {/* Tab Pianificatore */}
                         {activeTab === 'planner' && (
                             <div className="space-y-6">
                                 {/* Target Section */}
@@ -344,7 +339,7 @@
                                                             <div key={meal} className="border rounded-lg p-3">
                                                                 <h4 className="font-medium mb-2">{meal}</h4>
                                                                 
-                                                                {/* Lista alimenti nel pasto */}
+                                                                {/* Lista alimenti */}
                                                                 <div className="space-y-2 mb-3">
                                                                     {weekPlan[day][meal].map((food, index) => (
                                                                         <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded text-sm">
@@ -376,7 +371,7 @@
                                                                                 onClick={() => removeFoodFromMeal(day, meal, index)}
                                                                                 className="ml-2 p-1 text-red-500 hover:bg-red-50 rounded"
                                                                             >
-                                                                                <TrashIcon />
+                                                                                ✕
                                                                             </button>
                                                                         </div>
                                                                     ))}
@@ -430,88 +425,40 @@
 
                                 {/* Riepilogo settimanale */}
                                 <div className="bg-white rounded-lg shadow-sm p-6">
-                                    <h2 className="text-xl font-semibold mb-4">Riepilogo Settimanale (Media giorni compilati)</h2>
-                                    <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                                    <h2 className="text-xl font-semibold mb-4">Riepilogo Settimanale</h2>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                         
-                                        {/* Grafico Target */}
-                                        <div>
-                                            <h3 className="text-center font-medium mb-2">Target</h3>
-                                            <div className="h-64">
-                                                <ResponsiveContainer width="100%" height="100%">
-                                                    <PieChart>
-                                                        <Pie
-                                                            data={targetPieData}
-                                                            cx="50%"
-                                                            cy="50%"
-                                                            innerRadius={50}
-                                                            outerRadius={90}
-                                                            paddingAngle={5}
-                                                            dataKey="value"
-                                                        >
-                                                            {targetPieData.map((entry, index) => (
-                                                                <Cell key={`target-cell-${index}`} fill={entry.color} />
-                                                            ))}
-                                                        </Pie>
-                                                        <Tooltip formatter={(value) => `${value}%`} />
-                                                        <Legend />
-                                                    </PieChart>
-                                                </ResponsiveContainer>
-                                            </div>
-                                        </div>
+                                        {/* Target Chart */}
+                                        <SimpleChart 
+                                            data={{
+                                                carbsPerc: targets.carbsPerc,
+                                                fatsPerc: targets.fatsPerc,
+                                                proteinsPerc: targets.proteinsPerc
+                                            }}
+                                            title="Target"
+                                        />
                                         
-                                        {/* Grafico Reale */}
-                                        <div>
-                                            <h3 className="text-center font-medium mb-2">Media Reale</h3>
-                                            <div className="h-64">
-                                                <ResponsiveContainer width="100%" height="100%">
-                                                    <PieChart>
-                                                        <Pie
-                                                            data={actualPieData}
-                                                            cx="50%"
-                                                            cy="50%"
-                                                            innerRadius={50}
-                                                            outerRadius={90}
-                                                            paddingAngle={5}
-                                                            dataKey="value"
-                                                        >
-                                                            {actualPieData.map((entry, index) => (
-                                                                <Cell key={`actual-cell-${index}`} fill={entry.color} />
-                                                            ))}
-                                                        </Pie>
-                                                        <Tooltip formatter={(value) => `${value}%`} />
-                                                        <Legend />
-                                                    </PieChart>
-                                                </ResponsiveContainer>
-                                            </div>
-                                        </div>
+                                        {/* Actual Chart */}
+                                        <SimpleChart 
+                                            data={weeklyStats}
+                                            title="Media Reale"
+                                        />
                                         
                                         {/* Dati numerici */}
                                         <div className="space-y-3">
                                             <div className="bg-gray-50 p-4 rounded-lg">
-                                                <h3 className="font-medium mb-2">Confronto Target vs Reale</h3>
+                                                <h3 className="font-medium mb-2">Confronto</h3>
                                                 <div className="space-y-2 text-sm">
-                                                    <div className="flex justify-between">
-                                                        <span>Calorie:</span>
-                                                        <span><strong>{weeklyStats.calories}</strong> / {targets.calories}</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span>Carboidrati:</span>
-                                                        <span><strong>{weeklyStats.carbs}g ({weeklyStats.carbsPerc}%)</strong> / {macroGrams.carbs}g ({targets.carbsPerc}%)</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span>Grassi:</span>
-                                                        <span><strong>{weeklyStats.fats}g ({weeklyStats.fatsPerc}%)</strong> / {macroGrams.fats}g ({targets.fatsPerc}%)</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span>Proteine:</span>
-                                                        <span><strong>{weeklyStats.proteins}g ({weeklyStats.proteinsPerc}%)</strong> / {macroGrams.proteins}g ({targets.proteinsPerc}%)</span>
-                                                    </div>
+                                                    <div>Calorie: <strong>{weeklyStats.calories}</strong> / {targets.calories}</div>
+                                                    <div>Carb: <strong>{weeklyStats.carbs}g ({weeklyStats.carbsPerc}%)</strong></div>
+                                                    <div>Grassi: <strong>{weeklyStats.fats}g ({weeklyStats.fatsPerc}%)</strong></div>
+                                                    <div>Prot: <strong>{weeklyStats.proteins}g ({weeklyStats.proteinsPerc}%)</strong></div>
                                                 </div>
                                             </div>
                                             
                                             {weeklyStats.calories === 0 && (
                                                 <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg text-sm text-yellow-800">
-                                                    <p>Compila almeno un giorno per vedere i grafici e le statistiche.</p>
+                                                    <p>Compila almeno un giorno per vedere le statistiche.</p>
                                                 </div>
                                             )}
                                         </div>
@@ -520,12 +467,12 @@
                             </div>
                         )}
 
-                        {/* Tab Database Alimenti */}
+                        {/* Database Tab */}
                         {activeTab === 'database' && (
                             <div className="bg-white rounded-lg shadow-sm p-6">
                                 <h2 className="text-xl font-semibold mb-4">Database Alimenti</h2>
                                 
-                                {/* Form aggiunta alimento */}
+                                {/* Form aggiunta */}
                                 <div className="mb-6 p-4 border rounded-lg bg-gray-50">
                                     <h3 className="font-medium mb-3">Aggiungi Nuovo Alimento</h3>
                                     <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
@@ -570,58 +517,54 @@
                                     </div>
                                     <button
                                         onClick={addNewFood}
-                                        className="mt-3 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 flex items-center"
+                                        className="mt-3 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600"
                                     >
-                                        <PlusIcon />
-                                        <span className="ml-2">Aggiungi Alimento</span>
+                                        + Aggiungi Alimento
                                     </button>
                                 </div>
                                 
-                                {/* Tabella alimenti */}
+                                {/* Tabella */}
                                 <div className="overflow-x-auto">
                                     <table className="w-full border-collapse border border-gray-300">
                                         <thead>
                                             <tr className="bg-gray-100">
-                                                <th className="border border-gray
-                                               <th className="border border-gray-300 p-3 text-left">Nome Alimento</th>
-                                               <th className="border border-gray-300 p-3 text-center">Calorie/100g</th>
-                                               <th className="border border-gray-300 p-3 text-center">Carb/100g</th>
-                                               <th className="border border-gray-300 p-3 text-center">Grassi/100g</th>
-                                               <th className="border border-gray-300 p-3 text-center">Prot/100g</th>
-                                               <th className="border border-gray-300 p-3 text-center">Azioni</th>
-                                           </tr>
-                                       </thead>
-                                       <tbody>
-                                           {foodDatabase.map(food => (
-                                               <tr key={food.id} className="hover:bg-gray-50">
-                                                   <td className="border border-gray-300 p-3 font-medium">{food.name}</td>
-                                                   <td className="border border-gray-300 p-3 text-center">{food.calories}</td>
-                                                   <td className="border border-gray-300 p-3 text-center">{food.carbs}g</td>
-                                                   <td className="border border-gray-300 p-3 text-center">{food.fats}g</td>
-                                                   <td className="border border-gray-300 p-3 text-center">{food.proteins}g</td>
-                                                   <td className="border border-gray-300 p-3 text-center">
-                                                       <button
-                                                           onClick={() => removeFood(food.id)}
-                                                           className="p-2 text-red-500 hover:bg-red-50 rounded"
-                                                           title="Elimina alimento"
-                                                       >
-                                                           <TrashIcon />
-                                                       </button>
-                                                   </td>
-                                               </tr>
-                                           ))}
-                                       </tbody>
-                                   </table>
-                               </div>
-                           </div>
-                       )}
-                   </div>
-               </div>
-           );
-       };
+                                                <th className="border border-gray-300 p-3 text-left">Nome</th>
+                                                <th className="border border-gray-300 p-3">Cal/100g</th>
+                                                <th className="border border-gray-300 p-3">Carb/100g</th>
+                                                <th className="border border-gray-300 p-3">Grassi/100g</th>
+                                                <th className="border border-gray-300 p-3">Prot/100g</th>
+                                                <th className="border border-gray-300 p-3">Azioni</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {foodDatabase.map(food => (
+                                                <tr key={food.id} className="hover:bg-gray-50">
+                                                    <td className="border border-gray-300 p-3 font-medium">{food.name}</td>
+                                                    <td className="border border-gray-300 p-3 text-center">{food.calories}</td>
+                                                    <td className="border border-gray-300 p-3 text-center">{food.carbs}g</td>
+                                                    <td className="border border-gray-300 p-3 text-center">{food.fats}g</td>
+                                                    <td className="border border-gray-300 p-3 text-center">{food.proteins}g</td>
+                                                    <td className="border border-gray-300 p-3 text-center">
+                                                        <button
+                                                            onClick={() => removeFood(food.id)}
+                                                            className="p-2 text-red-500 hover:bg-red-50 rounded"
+                                                        >
+                                                            🗑️
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
 
-       // Render dell'app
-       ReactDOM.render(<WeeklyMealPlanner />, document.getElementById('root'));
-   </script>
+        ReactDOM.render(<WeeklyMealPlanner />, document.getElementById('root'));
+    </script>
 </body>
 </html>
