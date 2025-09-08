@@ -1,595 +1,628 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Search } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
-
-const WeeklyMealPlanner = () => {
-  // Database alimenti predefinito
-  const [foodDatabase, setFoodDatabase] = useState([
-    { id: 1, name: 'Pane integrale', calories: 247, carbs: 41.3, fats: 4.2, proteins: 13.2 },
-    { id: 2, name: 'Pollo petto', calories: 165, carbs: 0, fats: 3.6, proteins: 31 },
-    { id: 3, name: 'Riso basmati', calories: 365, carbs: 78, fats: 0.9, proteins: 8.1 },
-    { id: 4, name: 'Broccoli', calories: 34, carbs: 6.6, fats: 0.4, proteins: 2.8 },
-    { id: 5, name: 'Olio oliva', calories: 884, carbs: 0, fats: 100, proteins: 0 }
-  ]);
-
-  // Target calorico e macro
-  const [targets, setTargets] = useState({
-    calories: 1250,
-    carbsPerc: 50,
-    fatsPerc: 30,
-    proteinsPerc: 20
-  });
-
-  // Calcolatore macro in grammi basato su target calorico
-  const calculateMacroGrams = () => ({
-    carbs: Math.round((targets.calories * targets.carbsPerc / 100) / 4),
-    fats: Math.round((targets.calories * targets.fatsPerc / 100) / 9),
-    proteins: Math.round((targets.calories * targets.proteinsPerc / 100) / 4)
-  });
-
-  // Struttura pasti per ogni giorno
-  const [weekPlan, setWeekPlan] = useState(() => {
-    const days = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì'];
-    const meals = ['Colazione', 'Spuntino', 'Pranzo', 'Cena'];
-    const plan = {};
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pianificatore Menu Settimanale</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/recharts@2.8.0/umd/Recharts.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
     
-    days.forEach(day => {
-      plan[day] = {};
-      meals.forEach(meal => {
-        plan[day][meal] = [];
-      });
-    });
-    
-    return plan;
-  });
-
-  // Stati per UI
-  const [activeTab, setActiveTab] = useState('planner');
-  const [newFood, setNewFood] = useState({ name: '', calories: '', carbs: '', fats: '', proteins: '' });
-  const [searchTerms, setSearchTerms] = useState({});
-  const [suggestions, setSuggestions] = useState({});
-
-  // Gestione ricerca alimenti
-  const handleSearch = (dayKey, mealKey, term) => {
-    const key = `${dayKey}-${mealKey}`;
-    setSearchTerms(prev => ({ ...prev, [key]: term }));
-    
-    if (term.length >= 3) {
-      const filtered = foodDatabase.filter(food => 
-        food.name.toLowerCase().includes(term.toLowerCase())
-      );
-      setSuggestions(prev => ({ ...prev, [key]: filtered }));
-    } else {
-      setSuggestions(prev => ({ ...prev, [key]: [] }));
-    }
-  };
-
-  // Aggiungere alimento al pasto
-  const addFoodToMeal = (dayKey, mealKey, food, quantity = 100) => {
-    const key = `${dayKey}-${mealKey}`;
-    const foodWithQuantity = { ...food, quantity };
-    
-    setWeekPlan(prev => ({
-      ...prev,
-      [dayKey]: {
-        ...prev[dayKey],
-        [mealKey]: [...prev[dayKey][mealKey], foodWithQuantity]
-      }
-    }));
-    
-    setSearchTerms(prev => ({ ...prev, [key]: '' }));
-    setSuggestions(prev => ({ ...prev, [key]: [] }));
-  };
-
-  // Rimuovere alimento dal pasto
-  const removeFoodFromMeal = (dayKey, mealKey, index) => {
-    setWeekPlan(prev => ({
-      ...prev,
-      [dayKey]: {
-        ...prev[dayKey],
-        [mealKey]: prev[dayKey][mealKey].filter((_, i) => i !== index)
-      }
-    }));
-  };
-
-  // Calcolare totali giornalieri
-  const calculateDayTotals = (dayPlan) => {
-    let totals = { calories: 0, carbs: 0, fats: 0, proteins: 0 };
-    
-    Object.values(dayPlan).forEach(meal => {
-      meal.forEach(food => {
-        const multiplier = food.quantity / 100;
-        totals.calories += food.calories * multiplier;
-        totals.carbs += food.carbs * multiplier;
-        totals.fats += food.fats * multiplier;
-        totals.proteins += food.proteins * multiplier;
-      });
-    });
-    
-    return {
-      calories: Math.round(totals.calories),
-      carbs: Math.round(totals.carbs * 10) / 10,
-      fats: Math.round(totals.fats * 10) / 10,
-      proteins: Math.round(totals.proteins * 10) / 10,
-      carbsPerc: Math.round((totals.carbs * 4 / totals.calories * 100) * 10) / 10 || 0,
-      fatsPerc: Math.round((totals.fats * 9 / totals.calories * 100) * 10) / 10 || 0,
-      proteinsPerc: Math.round((totals.proteins * 4 / totals.calories * 100) * 10) / 10 || 0
-    };
-  };
-
-  // Calcolare media settimanale (solo giorni compilati)
-  const calculateWeeklyAverage = () => {
-    const days = Object.keys(weekPlan);
-    let weeklyTotals = { calories: 0, carbs: 0, fats: 0, proteins: 0 };
-    let compiledDays = 0;
-    
-    days.forEach(day => {
-      const dayTotals = calculateDayTotals(weekPlan[day]);
-      if (dayTotals.calories > 0) { // Solo giorni con almeno qualche caloria
-        weeklyTotals.calories += dayTotals.calories;
-        weeklyTotals.carbs += dayTotals.carbs;
-        weeklyTotals.fats += dayTotals.fats;
-        weeklyTotals.proteins += dayTotals.proteins;
-        compiledDays++;
-      }
-    });
-    
-    if (compiledDays === 0) {
-      return {
-        calories: 0,
-        carbs: 0,
-        fats: 0,
-        proteins: 0,
-        carbsPerc: 0,
-        fatsPerc: 0,
-        proteinsPerc: 0
-      };
-    }
-    
-    const avgCalories = weeklyTotals.calories / compiledDays;
-    
-    return {
-      calories: Math.round(avgCalories),
-      carbs: Math.round((weeklyTotals.carbs / compiledDays) * 10) / 10,
-      fats: Math.round((weeklyTotals.fats / compiledDays) * 10) / 10,
-      proteins: Math.round((weeklyTotals.proteins / compiledDays) * 10) / 10,
-      carbsPerc: Math.round((weeklyTotals.carbs / compiledDays * 4 / avgCalories * 100) * 10) / 10 || 0,
-      fatsPerc: Math.round((weeklyTotals.fats / compiledDays * 9 / avgCalories * 100) * 10) / 10 || 0,
-      proteinsPerc: Math.round((weeklyTotals.proteins / compiledDays * 4 / avgCalories * 100) * 10) / 10 || 0
-    };
-  };
-
-  // Aggiungere nuovo alimento al database
-  const addNewFood = () => {
-    if (newFood.name && newFood.calories && newFood.carbs && newFood.fats && newFood.proteins) {
-      const food = {
-        id: Date.now(),
-        name: newFood.name,
-        calories: parseFloat(newFood.calories),
-        carbs: parseFloat(newFood.carbs),
-        fats: parseFloat(newFood.fats),
-        proteins: parseFloat(newFood.proteins)
-      };
-      setFoodDatabase(prev => [...prev, food]);
-      setNewFood({ name: '', calories: '', carbs: '', fats: '', proteins: '' });
-    }
-  };
-
-  // Rimuovere alimento dal database
-  const removeFood = (id) => {
-    setFoodDatabase(prev => prev.filter(food => food.id !== id));
-  };
-
-  // Calcoli per i grafici
-  const macroGrams = calculateMacroGrams();
-  const weeklyStats = calculateWeeklyAverage();
-  
-  // Dati target per grafico
-  const targetPieData = [
-    { name: 'Carboidrati', value: targets.carbsPerc, color: '#8884d8' },
-    { name: 'Grassi', value: targets.fatsPerc, color: '#82ca9d' },
-    { name: 'Proteine', value: targets.proteinsPerc, color: '#ffc658' }
-  ];
-  
-  // Dati reali per grafico
-  const actualPieData = [
-    { name: 'Carboidrati', value: weeklyStats.carbsPerc, color: '#8884d8' },
-    { name: 'Grassi', value: weeklyStats.fatsPerc, color: '#82ca9d' },
-    { name: 'Proteine', value: weeklyStats.proteinsPerc, color: '#ffc658' }
-  ];
-
-  return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-center mb-6 text-gray-800">
-          Pianificatore Menu Settimanale
-        </h1>
+    <script type="text/babel">
+        const { useState } = React;
+        const { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } = Recharts;
         
-        {/* Tabs */}
-        <div className="flex mb-6 bg-white rounded-lg shadow-sm">
-          <button
-            onClick={() => setActiveTab('planner')}
-            className={`flex-1 py-3 px-4 text-center font-medium rounded-l-lg ${
-              activeTab === 'planner' 
-                ? 'bg-blue-500 text-white' 
-                : 'bg-white text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            Pianificatore
-          </button>
-          <button
-            onClick={() => setActiveTab('database')}
-            className={`flex-1 py-3 px-4 text-center font-medium rounded-r-lg ${
-              activeTab === 'database' 
-                ? 'bg-blue-500 text-white' 
-                : 'bg-white text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            Database Alimenti
-          </button>
-        </div>
+        // Icone semplici senza lucide-react
+        const PlusIcon = () => (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+        );
+        
+        const TrashIcon = () => (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="3,6 5,6 21,6"></polyline>
+                <path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path>
+            </svg>
+        );
 
-        {/* Tab Pianificatore */}
-        {activeTab === 'planner' && (
-          <div className="space-y-6">
-            {/* Target Section */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-xl font-semibold mb-4">Target Giornaliero</h2>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Calorie</label>
-                  <input
-                    type="number"
-                    value={targets.calories}
-                    onChange={(e) => setTargets(prev => ({ ...prev, calories: parseInt(e.target.value) || 0 }))}
-                    className="w-full p-2 border rounded-md"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Carboidrati: {macroGrams.carbs}g ({targets.carbsPerc}%)
-                  </label>
-                  <input
-                    type="range"
-                    min="10"
-                    max="70"
-                    value={targets.carbsPerc}
-                    onChange={(e) => setTargets(prev => ({ 
-                      ...prev, 
-                      carbsPerc: parseInt(e.target.value),
-                      fatsPerc: Math.max(10, prev.fatsPerc),
-                      proteinsPerc: Math.max(10, 100 - parseInt(e.target.value) - prev.fatsPerc)
-                    }))}
-                    className="w-full"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Grassi: {macroGrams.fats}g ({targets.fatsPerc}%)
-                  </label>
-                  <input
-                    type="range"
-                    min="10"
-                    max="50"
-                    value={targets.fatsPerc}
-                    onChange={(e) => setTargets(prev => ({ 
-                      ...prev, 
-                      fatsPerc: parseInt(e.target.value),
-                      proteinsPerc: Math.max(10, 100 - prev.carbsPerc - parseInt(e.target.value))
-                    }))}
-                    className="w-full"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Proteine: {macroGrams.proteins}g ({targets.proteinsPerc}%)
-                  </label>
-                  <input
-                    type="range"
-                    min="10"
-                    max="40"
-                    value={targets.proteinsPerc}
-                    onChange={(e) => setTargets(prev => ({ 
-                      ...prev, 
-                      proteinsPerc: parseInt(e.target.value),
-                      carbsPerc: Math.max(10, 100 - prev.fatsPerc - parseInt(e.target.value))
-                    }))}
-                    className="w-full"
-                  />
-                </div>
-              </div>
-            </div>
+        const WeeklyMealPlanner = () => {
+            // Database alimenti predefinito
+            const [foodDatabase, setFoodDatabase] = useState([
+                { id: 1, name: 'Pane integrale', calories: 247, carbs: 41.3, fats: 4.2, proteins: 13.2 },
+                { id: 2, name: 'Pollo petto', calories: 165, carbs: 0, fats: 3.6, proteins: 31 },
+                { id: 3, name: 'Riso basmati', calories: 365, carbs: 78, fats: 0.9, proteins: 8.1 },
+                { id: 4, name: 'Broccoli', calories: 34, carbs: 6.6, fats: 0.4, proteins: 2.8 },
+                { id: 5, name: 'Olio oliva', calories: 884, carbs: 0, fats: 100, proteins: 0 }
+            ]);
 
-            {/* Weekly Plan */}
-            <div className="space-y-4">
-              {Object.keys(weekPlan).map(day => {
-                const dayTotals = calculateDayTotals(weekPlan[day]);
+            // Target calorico e macro
+            const [targets, setTargets] = useState({
+                calories: 1250,
+                carbsPerc: 50,
+                fatsPerc: 30,
+                proteinsPerc: 20
+            });
+
+            // Calcolatore macro in grammi basato su target calorico
+            const calculateMacroGrams = () => ({
+                carbs: Math.round((targets.calories * targets.carbsPerc / 100) / 4),
+                fats: Math.round((targets.calories * targets.fatsPerc / 100) / 9),
+                proteins: Math.round((targets.calories * targets.proteinsPerc / 100) / 4)
+            });
+
+            // Struttura pasti per ogni giorno
+            const [weekPlan, setWeekPlan] = useState(() => {
+                const days = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì'];
+                const meals = ['Colazione', 'Spuntino', 'Pranzo', 'Cena'];
+                const plan = {};
                 
-                return (
-                  <div key={day} className="bg-white rounded-lg shadow-sm p-6">
-                    <h3 className="text-lg font-semibold mb-4">{day}</h3>
-                    
-                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-4">
-                      {['Colazione', 'Spuntino', 'Pranzo', 'Cena'].map(meal => {
-                        const searchKey = `${day}-${meal}`;
+                days.forEach(day => {
+                    plan[day] = {};
+                    meals.forEach(meal => {
+                        plan[day][meal] = [];
+                    });
+                });
+                
+                return plan;
+            });
+
+            // Stati per UI
+            const [activeTab, setActiveTab] = useState('planner');
+            const [newFood, setNewFood] = useState({ name: '', calories: '', carbs: '', fats: '', proteins: '' });
+            const [searchTerms, setSearchTerms] = useState({});
+            const [suggestions, setSuggestions] = useState({});
+
+            // Gestione ricerca alimenti
+            const handleSearch = (dayKey, mealKey, term) => {
+                const key = `${dayKey}-${mealKey}`;
+                setSearchTerms(prev => ({ ...prev, [key]: term }));
+                
+                if (term.length >= 3) {
+                    const filtered = foodDatabase.filter(food => 
+                        food.name.toLowerCase().includes(term.toLowerCase())
+                    );
+                    setSuggestions(prev => ({ ...prev, [key]: filtered }));
+                } else {
+                    setSuggestions(prev => ({ ...prev, [key]: [] }));
+                }
+            };
+
+            // Aggiungere alimento al pasto
+            const addFoodToMeal = (dayKey, mealKey, food, quantity = 100) => {
+                const key = `${dayKey}-${mealKey}`;
+                const foodWithQuantity = { ...food, quantity };
+                
+                setWeekPlan(prev => ({
+                    ...prev,
+                    [dayKey]: {
+                        ...prev[dayKey],
+                        [mealKey]: [...prev[dayKey][mealKey], foodWithQuantity]
+                    }
+                }));
+                
+                setSearchTerms(prev => ({ ...prev, [key]: '' }));
+                setSuggestions(prev => ({ ...prev, [key]: [] }));
+            };
+
+            // Rimuovere alimento dal pasto
+            const removeFoodFromMeal = (dayKey, mealKey, index) => {
+                setWeekPlan(prev => ({
+                    ...prev,
+                    [dayKey]: {
+                        ...prev[dayKey],
+                        [mealKey]: prev[dayKey][mealKey].filter((_, i) => i !== index)
+                    }
+                }));
+            };
+
+            // Calcolare totali giornalieri
+            const calculateDayTotals = (dayPlan) => {
+                let totals = { calories: 0, carbs: 0, fats: 0, proteins: 0 };
+                
+                Object.values(dayPlan).forEach(meal => {
+                    meal.forEach(food => {
+                        const multiplier = food.quantity / 100;
+                        totals.calories += food.calories * multiplier;
+                        totals.carbs += food.carbs * multiplier;
+                        totals.fats += food.fats * multiplier;
+                        totals.proteins += food.proteins * multiplier;
+                    });
+                });
+                
+                return {
+                    calories: Math.round(totals.calories),
+                    carbs: Math.round(totals.carbs * 10) / 10,
+                    fats: Math.round(totals.fats * 10) / 10,
+                    proteins: Math.round(totals.proteins * 10) / 10,
+                    carbsPerc: Math.round((totals.carbs * 4 / totals.calories * 100) * 10) / 10 || 0,
+                    fatsPerc: Math.round((totals.fats * 9 / totals.calories * 100) * 10) / 10 || 0,
+                    proteinsPerc: Math.round((totals.proteins * 4 / totals.calories * 100) * 10) / 10 || 0
+                };
+            };
+
+            // Calcolare media settimanale (solo giorni compilati)
+            const calculateWeeklyAverage = () => {
+                const days = Object.keys(weekPlan);
+                let weeklyTotals = { calories: 0, carbs: 0, fats: 0, proteins: 0 };
+                let compiledDays = 0;
+                
+                days.forEach(day => {
+                    const dayTotals = calculateDayTotals(weekPlan[day]);
+                    if (dayTotals.calories > 0) {
+                        weeklyTotals.calories += dayTotals.calories;
+                        weeklyTotals.carbs += dayTotals.carbs;
+                        weeklyTotals.fats += dayTotals.fats;
+                        weeklyTotals.proteins += dayTotals.proteins;
+                        compiledDays++;
+                    }
+                });
+                
+                if (compiledDays === 0) {
+                    return {
+                        calories: 0, carbs: 0, fats: 0, proteins: 0,
+                        carbsPerc: 0, fatsPerc: 0, proteinsPerc: 0
+                    };
+                }
+                
+                const avgCalories = weeklyTotals.calories / compiledDays;
+                
+                return {
+                    calories: Math.round(avgCalories),
+                    carbs: Math.round((weeklyTotals.carbs / compiledDays) * 10) / 10,
+                    fats: Math.round((weeklyTotals.fats / compiledDays) * 10) / 10,
+                    proteins: Math.round((weeklyTotals.proteins / compiledDays) * 10) / 10,
+                    carbsPerc: Math.round((weeklyTotals.carbs / compiledDays * 4 / avgCalories * 100) * 10) / 10 || 0,
+                    fatsPerc: Math.round((weeklyTotals.fats / compiledDays * 9 / avgCalories * 100) * 10) / 10 || 0,
+                    proteinsPerc: Math.round((weeklyTotals.proteins / compiledDays * 4 / avgCalories * 100) * 10) / 10 || 0
+                };
+            };
+
+            // Aggiungere nuovo alimento al database
+            const addNewFood = () => {
+                if (newFood.name && newFood.calories && newFood.carbs && newFood.fats && newFood.proteins) {
+                    const food = {
+                        id: Date.now(),
+                        name: newFood.name,
+                        calories: parseFloat(newFood.calories),
+                        carbs: parseFloat(newFood.carbs),
+                        fats: parseFloat(newFood.fats),
+                        proteins: parseFloat(newFood.proteins)
+                    };
+                    setFoodDatabase(prev => [...prev, food]);
+                    setNewFood({ name: '', calories: '', carbs: '', fats: '', proteins: '' });
+                }
+            };
+
+            // Rimuovere alimento dal database
+            const removeFood = (id) => {
+                setFoodDatabase(prev => prev.filter(food => food.id !== id));
+            };
+
+            // Calcoli per i grafici
+            const macroGrams = calculateMacroGrams();
+            const weeklyStats = calculateWeeklyAverage();
+            
+            // Dati target per grafico
+            const targetPieData = [
+                { name: 'Carboidrati', value: targets.carbsPerc, color: '#8884d8' },
+                { name: 'Grassi', value: targets.fatsPerc, color: '#82ca9d' },
+                { name: 'Proteine', value: targets.proteinsPerc, color: '#ffc658' }
+            ];
+            
+            // Dati reali per grafico
+            const actualPieData = [
+                { name: 'Carboidrati', value: weeklyStats.carbsPerc, color: '#8884d8' },
+                { name: 'Grassi', value: weeklyStats.fatsPerc, color: '#82ca9d' },
+                { name: 'Proteine', value: weeklyStats.proteinsPerc, color: '#ffc658' }
+            ];
+
+            return (
+                <div className="min-h-screen bg-gray-50 p-4">
+                    <div className="max-w-7xl mx-auto">
+                        <h1 className="text-3xl font-bold text-center mb-6 text-gray-800">
+                            Pianificatore Menu Settimanale
+                        </h1>
                         
-                        return (
-                          <div key={meal} className="border rounded-lg p-3">
-                            <h4 className="font-medium mb-2">{meal}</h4>
-                            
-                            {/* Lista alimenti nel pasto */}
-                            <div className="space-y-2 mb-3">
-                              {weekPlan[day][meal].map((food, index) => (
-                                <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded text-sm">
-                                  <div className="flex-1">
-                                    <div className="font-medium">{food.name}</div>
-                                    <div className="text-gray-600">
-                                      {food.quantity}g - {Math.round(food.calories * food.quantity / 100)}cal
+                        {/* Tabs */}
+                        <div className="flex mb-6 bg-white rounded-lg shadow-sm">
+                            <button
+                                onClick={() => setActiveTab('planner')}
+                                className={`flex-1 py-3 px-4 text-center font-medium rounded-l-lg ${
+                                    activeTab === 'planner' 
+                                        ? 'bg-blue-500 text-white' 
+                                        : 'bg-white text-gray-700 hover:bg-gray-50'
+                                }`}
+                            >
+                                Pianificatore
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('database')}
+                                className={`flex-1 py-3 px-4 text-center font-medium rounded-r-lg ${
+                                    activeTab === 'database' 
+                                        ? 'bg-blue-500 text-white' 
+                                        : 'bg-white text-gray-700 hover:bg-gray-50'
+                                }`}
+                            >
+                                Database Alimenti
+                            </button>
+                        </div>
+
+                        {/* Tab Pianificatore */}
+                        {activeTab === 'planner' && (
+                            <div className="space-y-6">
+                                {/* Target Section */}
+                                <div className="bg-white rounded-lg shadow-sm p-6">
+                                    <h2 className="text-xl font-semibold mb-4">Target Giornaliero</h2>
+                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1">Calorie</label>
+                                            <input
+                                                type="number"
+                                                value={targets.calories}
+                                                onChange={(e) => setTargets(prev => ({ ...prev, calories: parseInt(e.target.value) || 0 }))}
+                                                className="w-full p-2 border rounded-md"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1">
+                                                Carboidrati: {macroGrams.carbs}g ({targets.carbsPerc}%)
+                                            </label>
+                                            <input
+                                                type="range"
+                                                min="10"
+                                                max="70"
+                                                value={targets.carbsPerc}
+                                                onChange={(e) => setTargets(prev => ({ 
+                                                    ...prev, 
+                                                    carbsPerc: parseInt(e.target.value),
+                                                    proteinsPerc: Math.max(10, 100 - parseInt(e.target.value) - prev.fatsPerc)
+                                                }))}
+                                                className="w-full"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1">
+                                                Grassi: {macroGrams.fats}g ({targets.fatsPerc}%)
+                                            </label>
+                                            <input
+                                                type="range"
+                                                min="10"
+                                                max="50"
+                                                value={targets.fatsPerc}
+                                                onChange={(e) => setTargets(prev => ({ 
+                                                    ...prev, 
+                                                    fatsPerc: parseInt(e.target.value),
+                                                    proteinsPerc: Math.max(10, 100 - prev.carbsPerc - parseInt(e.target.value))
+                                                }))}
+                                                className="w-full"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1">
+                                                Proteine: {macroGrams.proteins}g ({targets.proteinsPerc}%)
+                                            </label>
+                                            <input
+                                                type="range"
+                                                min="10"
+                                                max="40"
+                                                value={targets.proteinsPerc}
+                                                onChange={(e) => setTargets(prev => ({ 
+                                                    ...prev, 
+                                                    proteinsPerc: parseInt(e.target.value),
+                                                    carbsPerc: Math.max(10, 100 - prev.fatsPerc - parseInt(e.target.value))
+                                                }))}
+                                                className="w-full"
+                                            />
+                                        </div>
                                     </div>
-                                  </div>
-                                  <input
-                                    type="number"
-                                    value={food.quantity}
-                                    onChange={(e) => {
-                                      const newQuantity = parseInt(e.target.value) || 0;
-                                      setWeekPlan(prev => ({
-                                        ...prev,
-                                        [day]: {
-                                          ...prev[day],
-                                          [meal]: prev[day][meal].map((f, i) => 
-                                            i === index ? { ...f, quantity: newQuantity } : f
-                                          )
-                                        }
-                                      }));
-                                    }}
-                                    className="w-16 p-1 text-xs border rounded ml-2"
-                                    min="1"
-                                  />
-                                  <button
-                                    onClick={() => removeFoodFromMeal(day, meal, index)}
-                                    className="ml-2 p-1 text-red-500 hover:bg-red-50 rounded"
-                                  >
-                                    <Trash2 size={14} />
-                                  </button>
                                 </div>
-                              ))}
+
+                                {/* Weekly Plan */}
+                                <div className="space-y-4">
+                                    {Object.keys(weekPlan).map(day => {
+                                        const dayTotals = calculateDayTotals(weekPlan[day]);
+                                        
+                                        return (
+                                            <div key={day} className="bg-white rounded-lg shadow-sm p-6">
+                                                <h3 className="text-lg font-semibold mb-4">{day}</h3>
+                                                
+                                                <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-4">
+                                                    {['Colazione', 'Spuntino', 'Pranzo', 'Cena'].map(meal => {
+                                                        const searchKey = `${day}-${meal}`;
+                                                        
+                                                        return (
+                                                            <div key={meal} className="border rounded-lg p-3">
+                                                                <h4 className="font-medium mb-2">{meal}</h4>
+                                                                
+                                                                {/* Lista alimenti nel pasto */}
+                                                                <div className="space-y-2 mb-3">
+                                                                    {weekPlan[day][meal].map((food, index) => (
+                                                                        <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded text-sm">
+                                                                            <div className="flex-1">
+                                                                                <div className="font-medium">{food.name}</div>
+                                                                                <div className="text-gray-600">
+                                                                                    {food.quantity}g - {Math.round(food.calories * food.quantity / 100)}cal
+                                                                                </div>
+                                                                            </div>
+                                                                            <input
+                                                                                type="number"
+                                                                                value={food.quantity}
+                                                                                onChange={(e) => {
+                                                                                    const newQuantity = parseInt(e.target.value) || 0;
+                                                                                    setWeekPlan(prev => ({
+                                                                                        ...prev,
+                                                                                        [day]: {
+                                                                                            ...prev[day],
+                                                                                            [meal]: prev[day][meal].map((f, i) => 
+                                                                                                i === index ? { ...f, quantity: newQuantity } : f
+                                                                                            )
+                                                                                        }
+                                                                                    }));
+                                                                                }}
+                                                                                className="w-16 p-1 text-xs border rounded ml-2"
+                                                                                min="1"
+                                                                            />
+                                                                            <button
+                                                                                onClick={() => removeFoodFromMeal(day, meal, index)}
+                                                                                className="ml-2 p-1 text-red-500 hover:bg-red-50 rounded"
+                                                                            >
+                                                                                <TrashIcon />
+                                                                            </button>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                                
+                                                                {/* Ricerca alimenti */}
+                                                                <div className="relative">
+                                                                    <input
+                                                                        type="text"
+                                                                        placeholder="Cerca alimento..."
+                                                                        value={searchTerms[searchKey] || ''}
+                                                                        onChange={(e) => handleSearch(day, meal, e.target.value)}
+                                                                        className="w-full p-2 text-sm border rounded-md"
+                                                                    />
+                                                                    
+                                                                    {suggestions[searchKey] && suggestions[searchKey].length > 0 && (
+                                                                        <div className="absolute z-10 w-full bg-white border rounded-md shadow-lg mt-1 max-h-40 overflow-y-auto">
+                                                                            {suggestions[searchKey].map(food => (
+                                                                                <div
+                                                                                    key={food.id}
+                                                                                    onClick={() => addFoodToMeal(day, meal, food)}
+                                                                                    className="p-2 hover:bg-gray-100 cursor-pointer text-sm"
+                                                                                >
+                                                                                    <div className="font-medium">{food.name}</div>
+                                                                                    <div className="text-gray-600 text-xs">
+                                                                                        {food.calories}cal - C:{food.carbs}g F:{food.fats}g P:{food.proteins}g
+                                                                                    </div>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                                
+                                                {/* Totali giornalieri */}
+                                                <div className="bg-blue-50 p-3 rounded-lg">
+                                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                                                        <div><strong>Calorie:</strong> {dayTotals.calories}</div>
+                                                        <div><strong>Carb:</strong> {dayTotals.carbs}g ({dayTotals.carbsPerc}%)</div>
+                                                        <div><strong>Grassi:</strong> {dayTotals.fats}g ({dayTotals.fatsPerc}%)</div>
+                                                        <div><strong>Prot:</strong> {dayTotals.proteins}g ({dayTotals.proteinsPerc}%)</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Riepilogo settimanale */}
+                                <div className="bg-white rounded-lg shadow-sm p-6">
+                                    <h2 className="text-xl font-semibold mb-4">Riepilogo Settimanale (Media giorni compilati)</h2>
+                                    <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                                        
+                                        {/* Grafico Target */}
+                                        <div>
+                                            <h3 className="text-center font-medium mb-2">Target</h3>
+                                            <div className="h-64">
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <PieChart>
+                                                        <Pie
+                                                            data={targetPieData}
+                                                            cx="50%"
+                                                            cy="50%"
+                                                            innerRadius={50}
+                                                            outerRadius={90}
+                                                            paddingAngle={5}
+                                                            dataKey="value"
+                                                        >
+                                                            {targetPieData.map((entry, index) => (
+                                                                <Cell key={`target-cell-${index}`} fill={entry.color} />
+                                                            ))}
+                                                        </Pie>
+                                                        <Tooltip formatter={(value) => `${value}%`} />
+                                                        <Legend />
+                                                    </PieChart>
+                                                </ResponsiveContainer>
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Grafico Reale */}
+                                        <div>
+                                            <h3 className="text-center font-medium mb-2">Media Reale</h3>
+                                            <div className="h-64">
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <PieChart>
+                                                        <Pie
+                                                            data={actualPieData}
+                                                            cx="50%"
+                                                            cy="50%"
+                                                            innerRadius={50}
+                                                            outerRadius={90}
+                                                            paddingAngle={5}
+                                                            dataKey="value"
+                                                        >
+                                                            {actualPieData.map((entry, index) => (
+                                                                <Cell key={`actual-cell-${index}`} fill={entry.color} />
+                                                            ))}
+                                                        </Pie>
+                                                        <Tooltip formatter={(value) => `${value}%`} />
+                                                        <Legend />
+                                                    </PieChart>
+                                                </ResponsiveContainer>
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Dati numerici */}
+                                        <div className="space-y-3">
+                                            <div className="bg-gray-50 p-4 rounded-lg">
+                                                <h3 className="font-medium mb-2">Confronto Target vs Reale</h3>
+                                                <div className="space-y-2 text-sm">
+                                                    <div className="flex justify-between">
+                                                        <span>Calorie:</span>
+                                                        <span><strong>{weeklyStats.calories}</strong> / {targets.calories}</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span>Carboidrati:</span>
+                                                        <span><strong>{weeklyStats.carbs}g ({weeklyStats.carbsPerc}%)</strong> / {macroGrams.carbs}g ({targets.carbsPerc}%)</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span>Grassi:</span>
+                                                        <span><strong>{weeklyStats.fats}g ({weeklyStats.fatsPerc}%)</strong> / {macroGrams.fats}g ({targets.fatsPerc}%)</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span>Proteine:</span>
+                                                        <span><strong>{weeklyStats.proteins}g ({weeklyStats.proteinsPerc}%)</strong> / {macroGrams.proteins}g ({targets.proteinsPerc}%)</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            {weeklyStats.calories === 0 && (
+                                                <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg text-sm text-yellow-800">
+                                                    <p>Compila almeno un giorno per vedere i grafici e le statistiche.</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            
-                            {/* Ricerca alimenti */}
-                            <div className="relative">
-                              <input
-                                type="text"
-                                placeholder="Cerca alimento..."
-                                value={searchTerms[searchKey] || ''}
-                                onChange={(e) => handleSearch(day, meal, e.target.value)}
-                                className="w-full p-2 text-sm border rounded-md"
-                              />
-                              
-                              {suggestions[searchKey] && suggestions[searchKey].length > 0 && (
-                                <div className="absolute z-10 w-full bg-white border rounded-md shadow-lg mt-1 max-h-40 overflow-y-auto">
-                                  {suggestions[searchKey].map(food => (
-                                    <div
-                                      key={food.id}
-                                      onClick={() => addFoodToMeal(day, meal, food)}
-                                      className="p-2 hover:bg-gray-100 cursor-pointer text-sm"
+                        )}
+
+                        {/* Tab Database Alimenti */}
+                        {activeTab === 'database' && (
+                            <div className="bg-white rounded-lg shadow-sm p-6">
+                                <h2 className="text-xl font-semibold mb-4">Database Alimenti</h2>
+                                
+                                {/* Form aggiunta alimento */}
+                                <div className="mb-6 p-4 border rounded-lg bg-gray-50">
+                                    <h3 className="font-medium mb-3">Aggiungi Nuovo Alimento</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                                        <input
+                                            type="text"
+                                            placeholder="Nome alimento"
+                                            value={newFood.name}
+                                            onChange={(e) => setNewFood(prev => ({ ...prev, name: e.target.value }))}
+                                            className="p-2 border rounded-md"
+                                        />
+                                        <input
+                                            type="number"
+                                            placeholder="Calorie/100g"
+                                            value={newFood.calories}
+                                            onChange={(e) => setNewFood(prev => ({ ...prev, calories: e.target.value }))}
+                                            className="p-2 border rounded-md"
+                                        />
+                                        <input
+                                            type="number"
+                                            step="0.1"
+                                            placeholder="Carb/100g"
+                                            value={newFood.carbs}
+                                            onChange={(e) => setNewFood(prev => ({ ...prev, carbs: e.target.value }))}
+                                            className="p-2 border rounded-md"
+                                        />
+                                        <input
+                                            type="number"
+                                            step="0.1"
+                                            placeholder="Grassi/100g"
+                                            value={newFood.fats}
+                                            onChange={(e) => setNewFood(prev => ({ ...prev, fats: e.target.value }))}
+                                            className="p-2 border rounded-md"
+                                        />
+                                        <input
+                                            type="number"
+                                            step="0.1"
+                                            placeholder="Prot/100g"
+                                            value={newFood.proteins}
+                                            onChange={(e) => setNewFood(prev => ({ ...prev, proteins: e.target.value }))}
+                                            className="p-2 border rounded-md"
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={addNewFood}
+                                        className="mt-3 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 flex items-center"
                                     >
-                                      <div className="font-medium">{food.name}</div>
-                                      <div className="text-gray-600 text-xs">
-                                        {food.calories}cal - C:{food.carbs}g F:{food.fats}g P:{food.proteins}g
-                                      </div>
-                                    </div>
-                                  ))}
+                                        <PlusIcon />
+                                        <span className="ml-2">Aggiungi Alimento</span>
+                                    </button>
                                 </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    
-                    {/* Totali giornalieri */}
-                    <div className="bg-blue-50 p-3 rounded-lg">
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-                        <div><strong>Calorie:</strong> {dayTotals.calories}</div>
-                        <div><strong>Carb:</strong> {dayTotals.carbs}g ({dayTotals.carbsPerc}%)</div>
-                        <div><strong>Grassi:</strong> {dayTotals.fats}g ({dayTotals.fatsPerc}%)</div>
-                        <div><strong>Prot:</strong> {dayTotals.proteins}g ({dayTotals.proteinsPerc}%)</div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                                
+                                {/* Tabella alimenti */}
+                                <div className="overflow-x-auto">
+                                    <table className="w-full border-collapse border border-gray-300">
+                                        <thead>
+                                            <tr className="
+                                              <tr className="bg-gray-100">
+                                               <th className="border border-gray-300 p-3 text-left">Nome Alimento</th>
+                                               <th className="border border-gray-300 p-3 text-center">Calorie/100g</th>
+                                               <th className="border border-gray-300 p-3 text-center">Carb/100g</th>
+                                               <th className="border border-gray-300 p-3 text-center">Grassi/100g</th>
+                                               <th className="border border-gray-300 p-3 text-center">Prot/100g</th>
+                                               <th className="border border-gray-300 p-3 text-center">Azioni</th>
+                                           </tr>
+                                       </thead>
+                                       <tbody>
+                                           {foodDatabase.map(food => (
+                                               <tr key={food.id} className="hover:bg-gray-50">
+                                                   <td className="border border-gray-300 p-3 font-medium">{food.name}</td>
+                                                   <td className="border border-gray-300 p-3 text-center">{food.calories}</td>
+                                                   <td className="border border-gray-300 p-3 text-center">{food.carbs}g</td>
+                                                   <td className="border border-gray-300 p-3 text-center">{food.fats}g</td>
+                                                   <td className="border border-gray-300 p-3 text-center">{food.proteins}g</td>
+                                                   <td className="border border-gray-300 p-3 text-center">
+                                                       <button
+                                                           onClick={() => removeFood(food.id)}
+                                                           className="p-2 text-red-500 hover:bg-red-50 rounded"
+                                                           title="Elimina alimento"
+                                                       >
+                                                           <TrashIcon />
+                                                       </button>
+                                                   </td>
+                                               </tr>
+                                           ))}
+                                       </tbody>
+                                   </table>
+                               </div>
+                           </div>
+                       )}
+                   </div>
+               </div>
+           );
+       };
 
-            {/* Riepilogo settimanale */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-xl font-semibold mb-4">Riepilogo Settimanale (Media giorni compilati)</h2>
-              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                
-                {/* Grafico Target */}
-                <div>
-                  <h3 className="text-center font-medium mb-2">Target</h3>
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={targetPieData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={50}
-                          outerRadius={90}
-                          paddingAngle={5}
-                          dataKey="value"
-                        >
-                          {targetPieData.map((entry, index) => (
-                            <Cell key={`target-cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip formatter={(value) => `${value}%`} />
-                        <Legend />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-                
-                {/* Grafico Reale */}
-                <div>
-                  <h3 className="text-center font-medium mb-2">Media Reale</h3>
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={actualPieData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={50}
-                          outerRadius={90}
-                          paddingAngle={5}
-                          dataKey="value"
-                        >
-                          {actualPieData.map((entry, index) => (
-                            <Cell key={`actual-cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip formatter={(value) => `${value}%`} />
-                        <Legend />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-                
-                {/* Dati numerici */}
-                <div className="space-y-3">
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <h3 className="font-medium mb-2">Confronto Target vs Reale</h3>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span>Calorie:</span>
-                        <span><strong>{weeklyStats.calories}</strong> / {targets.calories}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Carboidrati:</span>
-                        <span><strong>{weeklyStats.carbs}g ({weeklyStats.carbsPerc}%)</strong> / {macroGrams.carbs}g ({targets.carbsPerc}%)</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Grassi:</span>
-                        <span><strong>{weeklyStats.fats}g ({weeklyStats.fatsPerc}%)</strong> / {macroGrams.fats}g ({targets.fatsPerc}%)</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Proteine:</span>
-                        <span><strong>{weeklyStats.proteins}g ({weeklyStats.proteinsPerc}%)</strong> / {macroGrams.proteins}g ({targets.proteinsPerc}%)</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {weeklyStats.calories === 0 && (
-                    <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg text-sm text-yellow-800">
-                      <p>Compila almeno un giorno per vedere i grafici e le statistiche.</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Tab Database Alimenti */}
-        {activeTab === 'database' && (
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-xl font-semibold mb-4">Database Alimenti</h2>
-            
-            {/* Form aggiunta alimento */}
-            <div className="mb-6 p-4 border rounded-lg bg-gray-50">
-              <h3 className="font-medium mb-3">Aggiungi Nuovo Alimento</h3>
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-                <input
-                  type="text"
-                  placeholder="Nome alimento"
-                  value={newFood.name}
-                  onChange={(e) => setNewFood(prev => ({ ...prev, name: e.target.value }))}
-                  className="p-2 border rounded-md"
-                />
-                <input
-                  type="number"
-                  placeholder="Calorie/100g"
-                  value={newFood.calories}
-                  onChange={(e) => setNewFood(prev => ({ ...prev, calories: e.target.value }))}
-                  className="p-2 border rounded-md"
-                />
-                <input
-                  type="number"
-                  step="0.1"
-                  placeholder="Carb/100g"
-                  value={newFood.carbs}
-                  onChange={(e) => setNewFood(prev => ({ ...prev, carbs: e.target.value }))}
-                  className="p-2 border rounded-md"
-                />
-                <input
-                  type="number"
-                  step="0.1"
-                  placeholder="Grassi/100g"
-                  value={newFood.fats}
-                  onChange={(e) => setNewFood(prev => ({ ...prev, fats: e.target.value }))}
-                  className="p-2 border rounded-md"
-                />
-                <input
-                  type="number"
-                  step="0.1"
-                  placeholder="Prot/100g"
-                  value={newFood.proteins}
-                  onChange={(e) => setNewFood(prev => ({ ...prev, proteins: e.target.value }))}
-                  className="p-2 border rounded-md"
-                />
-              </div>
-              <button
-                onClick={addNewFood}
-                className="mt-3 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 flex items-center"
-              >
-                <Plus size={16} className="mr-2" />
-                Aggiungi Alimento
-              </button>
-            </div>
-            
-            {/* Tabella alimenti */}
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse border border-gray-300">
-                <thead>
-                  <tr className="bg-gray-100">
-                    <th className="border border-gray-300 p-3 text-left">Nome Alimento</th>
-                    <th className="border border-gray-300 p-3 text-center">Calorie/100g</th>
-                    <th className="border border-gray-300 p-3 text-center">Carb/100g</th>
-                    <th className="border border-gray-300 p-3 text-center">Grassi/100g</th>
-                    <th className="border border-gray-300 p-3 text-center">Prot/100g</th>
-                    <th className="border border-gray-300 p-3 text-center">Azioni</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {foodDatabase.map(food => (
-                    <tr key={food.id} className="hover:bg-gray-50">
-                      <td className="border border-gray-300 p-3 font-medium">{food.name}</td>
-                      <td className="border border-gray-300 p-3 text-center">{food.calories}</td>
-                      <td className="border border-gray-300 p-3 text-center">{food.carbs}g</td>
-                      <td className="border border-gray-300 p-3 text-center">{food.fats}g</td>
-                      <td className="border border-gray-300 p-3 text-center">{food.proteins}g</td>
-                      <td className="border border-gray-300 p-3 text-center">
-                        <button
-                          onClick={() => removeFood(food.id)}
-                          className="p-2 text-red-500 hover:bg-red-50 rounded"
-                          title="Elimina alimento"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-export default WeeklyMealPlanner;
+       // Render dell'app
+       const root = ReactDOM.createRoot(document.getElementById('root'));
+       root.render(<WeeklyMealPlanner />);
+   </script>
+</body>
+</html>
